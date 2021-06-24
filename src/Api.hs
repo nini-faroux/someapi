@@ -34,7 +34,7 @@ getUser name = do
 
 createUser :: User -> App Int64
 createUser user = do
-  newUser <- runDB (insert (User (userName user) (userAge user) (userEmail user)))
+  newUser <- runDB $ insert $ User (userName user) (userAge user) (userEmail user) (Just False)
   return $ fromSqlKey newUser
 
 hoistAppServer :: Env -> Server UserAPI
