@@ -30,7 +30,11 @@ dependencies:
 - warp
 - servant
 - servant-server
+- servant-multipart
 - mtl
+- smtp-mail
+- mime-mail
+- ginger
 
 library:
   source-dirs: src
