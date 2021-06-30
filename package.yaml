@@ -35,6 +35,9 @@ dependencies:
 - smtp-mail
 - mime-mail
 - ginger
+- servant-auth-server
+- libjwt-typed
+- either
 
 library:
   source-dirs: src

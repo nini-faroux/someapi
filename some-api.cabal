@@ -27,7 +27,9 @@ library
   exposed-modules:
       Api
       App
+      Config
       Email
+      JWT
       Model
   other-modules:
       Paths_some_api
@@ -35,7 +37,9 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , either
     , ginger
+    , libjwt-typed
     , mime-mail
     , monad-logger
     , mtl
@@ -44,6 +48,7 @@ library
     , rio
     , say
     , servant
+    , servant-auth-server
     , servant-multipart
     , servant-server
     , smtp-mail
@@ -60,7 +65,9 @@ executable some-api-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , either
     , ginger
+    , libjwt-typed
     , mime-mail
     , monad-logger
     , mtl
@@ -69,6 +76,7 @@ executable some-api-exe
     , rio
     , say
     , servant
+    , servant-auth-server
     , servant-multipart
     , servant-server
     , smtp-mail
@@ -87,7 +95,9 @@ test-suite some-api-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , either
     , ginger
+    , libjwt-typed
     , mime-mail
     , monad-logger
     , mtl
@@ -96,6 +106,7 @@ test-suite some-api-test
     , rio
     , say
     , servant
+    , servant-auth-server
     , servant-multipart
     , servant-server
     , smtp-mail
