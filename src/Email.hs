@@ -1,8 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Email where
 
+import Servant.Auth.Server
 import RIO
+import RIO.Time
 import qualified RIO.Text.Lazy as TL
 import qualified RIO.HashMap as HashMap
 import Network.Mail.SMTP hiding (htmlPart)
@@ -10,42 +13,46 @@ import Network.Mail.Mime (htmlPart, plainPart)
 import Text.Ginger
 import Text.Ginger.Html (htmlSource)
 import Model
+import Config
+import JWT
 
 sendActivationLink :: User -> IO ()
 sendActivationLink user = do
-  let mail = simpleMail from to cc bcc subject [body, urlHtml]
-  sendMailWithLoginTLS host "ninifaroux@gmail.com" "vqzidaqwusrrvjjm" mail
+  now <- getCurrentTime
+  let token = makeToken user now
+  let urlHtml = htmlPart $ TL.fromStrict $ urlText user token
+      mail = simpleMail from to cc bcc subject [body, urlHtml]
+  sendMailWithLoginTLS host googleMail googlePass mail
   where
     host       = "smtp.gmail.com"
-    from       = Address Nothing "ninifaroux@gmail.com"
+    from       = Address Nothing googleMail'
     to         = [Address (Just $ userName user) (userEmail user)]
     cc         = []
     bcc        = []
     subject    = "SomeAPI Account Activation"
     body       = plainPart ""
-    urlHtml    = htmlPart $ TL.fromStrict (urlText user)
+    urlText user token =
+      case decodeUtf8' token of
+        Left err -> error "Utf8 decoding error"
+        Right token' -> renderTokenTemplate (tokenTemplate token') (context token')
 
-urlText :: User -> Text
-urlText user = renderTemplate template (context user)
-
-renderTemplate :: Template SourcePos -> HashMap VarName Text -> Text
-renderTemplate template contextMap =
+renderTokenTemplate :: Template SourcePos -> HashMap Text Text -> Text
+renderTokenTemplate template contextMap =
   let contextLookup = flip scopeLookup contextMap
       context = makeContextHtml contextLookup
-  in htmlSource $ runGinger context template
+   in htmlSource $ runGinger context template
 
-template :: Template SourcePos
-template =
+tokenTemplate :: Text -> Template SourcePos
+tokenTemplate token =
   either (error . show) id . runIdentity $ parseGinger nullResolver Nothing form
-  where
-    form = "<form method=post action=http://localhost:8000/activate>" ++
-              "<input type=hidden name=userName value={{ name }}>" ++
-              "<input type=hidden name=userEmail value={{ email }}>" ++
-              "<button type=submit\">Activate</button>" ++
-           "</form>"
+    where
+      form = "<form method=post action=http://localhost:8000/activate>" ++
+                "<input type=hidden name=token value={{ token }}>" ++
+                "<button type=submit\">Activate</button>" ++
+              "</form>"
 
-context :: User -> HashMap Text Text
-context user = HashMap.fromList [("name", userName user), ("email", userEmail user)]
+context :: Text -> HashMap Text Text
+context token = HashMap.fromList [("token", token)]
 
 scopeLookup :: (Hashable k, Eq k, ToGVal m b) => k -> HashMap.HashMap k b -> GVal m
 scopeLookup key context = toGVal $ HashMap.lookup key context

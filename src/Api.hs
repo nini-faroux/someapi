@@ -1,17 +1,22 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Api where
 
 import RIO hiding (Handler)
+import RIO.Time
+import RIO.List (headMaybe)
 import Servant
 import Servant.Server
 import Servant.Multipart
-import Database.Persist.Postgresql (Entity(..), fromSqlKey, insert, selectFirst, selectList, (==.), (=.), updateWhere)
+import Database.Persist.Postgresql 
+  (Entity(..), fromSqlKey, insert, selectFirst, selectList, (==.), (=.), updateWhere)
 import Control.Monad.Except
 import App
 import Model
 import Email
+import JWT
 
 type UserAPI =
        "users" :> Get '[JSON] [Entity User]
@@ -27,16 +32,25 @@ userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount
 
 activateUserAccount :: MultipartData Mem -> App NoContent
 activateUserAccount formData = do
-  let [name, email] = getFormInput formData
-  _ <- runDB $ updateWhere [UserEmail ==. email, UserName ==. name, UserActivated ==. Just False] [UserActivated =. Just True]
-  return NoContent
+  let token = getFormInput formData
+  eUser <- liftIO . decodeAndValidateFull $ encodeUtf8 token
+  case eUser of
+    Left err -> throwIO err404
+    Right user -> do
+      _ <- runDB $ updateWhere [UserEmail ==. userEmail user, UserName ==. userName user, UserActivated ==. Just False] [UserActivated =. Just True]
+      return NoContent
 
-getFormInput :: MultipartData Mem -> [Text]
-getFormInput formData = [name, email]
+getFormInput :: MultipartData Mem -> Text
+getFormInput formData = token
   where
     nameValuePairs = inputs formData
-    name = iValue $ head nameValuePairs
-    email = iValue $ last nameValuePairs
+    token = maybe "" iValue $ headMaybe nameValuePairs
+
+createUser :: User -> App Int64
+createUser user = do
+  newUser <- runDB $ insert $ User (userName user) (userAge user) (userEmail user) (Just False)
+  liftIO $ sendActivationLink user
+  return $ fromSqlKey newUser
 
 getUsers :: App [Entity User]
 getUsers = runDB (selectList [] [])
@@ -47,12 +61,6 @@ getUser name = do
   case mUser of
     Nothing -> throwIO err404
     Just user -> return user
-
-createUser :: User -> App Int64
-createUser user = do
-  newUser <- runDB $ insert $ User (userName user) (userAge user) (userEmail user) (Just False)
-  liftIO $ sendActivationLink user
-  return $ fromSqlKey newUser
 
 hoistAppServer :: Env -> Server UserAPI
 hoistAppServer env' = hoistServer proxyAPI (transform env') userSever where

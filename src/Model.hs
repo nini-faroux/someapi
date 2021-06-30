@@ -11,17 +11,18 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
 
 module Model where
 
 import RIO
-import App (App, Env(..))
 import qualified Database.Persist.TH as PTH
 import Database.Persist (Entity(..))
 import Database.Persist.Sql (toSqlKey)
 import Database.Persist.Postgresql 
   (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
+import App (App, Env(..))
 import Say
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
@@ -31,7 +32,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     email Text
     activated Bool Maybe
     UniqueEmail email
-    deriving Show Read
+    deriving Show Read Generic
 |]
 
 runDB :: SqlPersistT IO a -> App a
@@ -43,6 +44,7 @@ runMigrations :: IO ()
 runMigrations = do
   say "Running migrations"
   runAction connectionString $ runMigration migrateAll
+  say "Migrations Finished"
 
 migrateDB :: IO ()
 migrateDB = runAction connectionString (runMigration migrateAll)
