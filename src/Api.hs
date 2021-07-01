@@ -18,11 +18,12 @@ import Model
 import Email
 import JWT
 
-type UserAPI =
-       "users" :> Get '[JSON] [Entity User]
-  :<|> "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
-  :<|> "user" :> ReqBody '[JSON] User :> Post '[JSON] Int64
-  :<|> "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] NoContent
+type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser
+
+type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
+type GetUsers = "users" :> Get '[JSON] [Entity User]
+type CreateUser = "user" :> ReqBody '[JSON] User :> Post '[JSON] Int64
+type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] NoContent
 
 proxyAPI :: Proxy UserAPI
 proxyAPI = Proxy
