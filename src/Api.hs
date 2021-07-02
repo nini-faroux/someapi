@@ -23,7 +23,7 @@ type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser
 type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] User :> Post '[JSON] Int64
-type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] NoContent
+type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 
 proxyAPI :: Proxy UserAPI
 proxyAPI = Proxy
@@ -31,7 +31,7 @@ proxyAPI = Proxy
 userSever :: ServerT UserAPI App
 userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount
 
-activateUserAccount :: MultipartData Mem -> App NoContent
+activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
   let token = getFormInput formData
   eUser <- liftIO . decodeAndValidateFull $ encodeUtf8 token
@@ -39,7 +39,7 @@ activateUserAccount formData = do
     Left err -> throwIO err404
     Right user -> do
       _ <- runDB $ updateWhere [UserEmail ==. userEmail user, UserName ==. userName user, UserActivated ==. Just False] [UserActivated =. Just True]
-      return NoContent
+      runDB $ selectFirst [UserEmail ==. userEmail user] []
 
 getFormInput :: MultipartData Mem -> Text
 getFormInput formData = token
