@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Api where
 
@@ -22,7 +23,7 @@ type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser
 
 type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
-type CreateUser = "user" :> ReqBody '[JSON] User :> Post '[JSON] Int64
+type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 
 proxyAPI :: Proxy UserAPI
@@ -30,6 +31,15 @@ proxyAPI = Proxy
 
 userSever :: ServerT UserAPI App
 userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount
+
+createUser :: UserWithPassword -> App Int64
+createUser UserWithPassword {..} = do
+  let user = User { userName = name, userAge = age, userEmail = email, userActivated = Just False }
+  pass <- liftIO $ makePassword password
+  newUser <- runDB $ insert user
+  _ <- runDB . insert $ Auth {authUserId = newUser, authPassword = pass}
+  liftIO $ sendActivationLink user
+  return $ fromSqlKey newUser
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
@@ -46,12 +56,6 @@ getFormInput formData = token
   where
     nameValuePairs = inputs formData
     token = maybe "" iValue $ headMaybe nameValuePairs
-
-createUser :: User -> App Int64
-createUser user = do
-  newUser <- runDB $ insert $ User (userName user) (userAge user) (userEmail user) (Just False)
-  liftIO $ sendActivationLink user
-  return $ fromSqlKey newUser
 
 getUsers :: App [Entity User]
 getUsers = runDB (selectList [] [])

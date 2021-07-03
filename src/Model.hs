@@ -22,6 +22,9 @@ import Database.Persist.Sql (toSqlKey)
 import Database.Persist.Postgresql 
   (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
+import Data.Aeson
+import Data.Password.Bcrypt
+import Data.Password.Instances
 import App (App, Env(..))
 import Say
 
@@ -33,7 +36,27 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     activated Bool Maybe
     UniqueEmail email
     deriving Show Read Generic
+
+  Auth
+    userId (Key User)
+    password (PasswordHash Bcrypt)
+    UniqueUserId userId
+    deriving Eq
 |]
+
+data UserWithPassword =
+  UserWithPassword {
+    name :: !Text
+  , age :: !Int
+  , email :: !Text
+  , password :: !Text
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON UserWithPassword
+instance ToJSON UserWithPassword
+
+makePassword :: Text -> IO (PasswordHash Bcrypt)
+makePassword = hashPassword . mkPassword
 
 runDB :: SqlPersistT IO a -> App a
 runDB query = do
