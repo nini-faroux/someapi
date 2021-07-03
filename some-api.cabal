@@ -36,13 +36,16 @@ library
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , either
     , ginger
     , libjwt-typed
     , mime-mail
     , monad-logger
     , mtl
+    , password
+    , password-instances
     , persistent
     , persistent-postgresql
     , rio
@@ -64,13 +67,16 @@ executable some-api-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , either
     , ginger
     , libjwt-typed
     , mime-mail
     , monad-logger
     , mtl
+    , password
+    , password-instances
     , persistent
     , persistent-postgresql
     , rio
@@ -94,13 +100,16 @@ test-suite some-api-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , either
     , ginger
     , libjwt-typed
     , mime-mail
     , monad-logger
     , mtl
+    , password
+    , password-instances
     , persistent
     , persistent-postgresql
     , rio

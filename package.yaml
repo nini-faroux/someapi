@@ -38,6 +38,9 @@ dependencies:
 - servant-auth-server
 - libjwt-typed
 - either
+- password
+- password-instances
+- aeson
 
 library:
   source-dirs: src
