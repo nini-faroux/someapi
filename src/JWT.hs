@@ -37,7 +37,7 @@ makeToken user = getToken . sign hmac512 <$> mkPayload user
 
 type MyJwt
   = Jwt
-      '["userName" ->> Text, "userAge" ->> Int, "userEmail" ->> Text, "userActivated" ->> Maybe Bool]
+      '["userName" ->> Text, "userAge" ->> Maybe Int, "userEmail" ->> Text, "userActivated" ->> Maybe Bool]
       'NoNs
 
 instance ToPrivateClaims User

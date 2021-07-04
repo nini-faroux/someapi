@@ -31,7 +31,7 @@ import Say
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
     name Text
-    age Int
+    age Int Maybe
     email Text
     activated Bool Maybe
     UniqueEmail email
@@ -47,7 +47,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
 data UserWithPassword =
   UserWithPassword {
     name :: !Text
-  , age :: !Int
+  , age :: !(Maybe Int)
   , email :: !Text
   , password :: !Text
   } deriving (Eq, Show, Generic)

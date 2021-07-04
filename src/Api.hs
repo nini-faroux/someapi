@@ -2,35 +2,62 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Api where
 
-import RIO hiding (Handler)
+import RIO hiding (Handler, (^.), on)
 import RIO.Time
 import RIO.List (headMaybe)
 import Servant
 import Servant.Server
 import Servant.Multipart
-import Database.Persist.Postgresql 
-  (Entity(..), fromSqlKey, insert, selectFirst, selectList, (==.), (=.), updateWhere)
+import qualified Database.Persist as P
+import Database.Esqueleto.Experimental 
+  (Entity(..), InnerJoin(..), 
+  select, from, on, table, val, where_, insert, fromSqlKey, val,
+  (==.), (=.), (^.), (:&)(..))
+import Data.Password.Bcrypt
 import Control.Monad.Except
 import App
 import Model
 import Email
 import JWT
 
-type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser
+type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser :<|> LoginUser
 
 type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
+type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] (Key User)
 
 proxyAPI :: Proxy UserAPI
 proxyAPI = Proxy
 
 userSever :: ServerT UserAPI App
-userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount
+userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser
+
+loginUser :: UserWithPassword -> App (Key User)
+loginUser UserWithPassword {..} = do
+  auth <- runDB $
+    select $ do
+    (user :& auth) <-
+        from $
+        table @User `InnerJoin` table @Auth
+        `on`
+        (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
+    where_ (user ^. UserEmail ==. val email)
+    where_ (user ^. UserName ==. val name)
+    where_ (user ^. UserActivated ==. val (Just True))
+    pure auth
+  case auth of
+    [Entity _ (Auth uid hashPass)] -> do
+      let pass' = mkPassword password
+      case checkPassword pass' hashPass of
+        PasswordCheckFail -> throwIO err401
+        PasswordCheckSuccess -> return uid
+    _ -> throwIO err401
 
 createUser :: UserWithPassword -> App Int64
 createUser UserWithPassword {..} = do
@@ -48,8 +75,11 @@ activateUserAccount formData = do
   case eUser of
     Left err -> throwIO err404
     Right user -> do
-      _ <- runDB $ updateWhere [UserEmail ==. userEmail user, UserName ==. userName user, UserActivated ==. Just False] [UserActivated =. Just True]
-      runDB $ selectFirst [UserEmail ==. userEmail user] []
+      _ <- runDB $ P.updateWhere [UserEmail P.==. userEmail user,
+                                  UserName P.==. userName user,
+                                  UserActivated P.==. Just False]
+                                 [UserActivated P.=. Just True]
+      runDB $ P.selectFirst [UserEmail P.==. userEmail user] []
 
 getFormInput :: MultipartData Mem -> Text
 getFormInput formData = token
@@ -58,11 +88,11 @@ getFormInput formData = token
     token = maybe "" iValue $ headMaybe nameValuePairs
 
 getUsers :: App [Entity User]
-getUsers = runDB (selectList [] [])
+getUsers = runDB $ P.selectList [] []
 
 getUser :: Text -> App (Entity User)
 getUser name = do
-  mUser <- runDB (selectFirst [UserName ==. name] [])
+  mUser <- runDB $ P.selectFirst [UserName P.==. name] []
   case mUser of
     Nothing -> throwIO err404
     Just user -> return user
