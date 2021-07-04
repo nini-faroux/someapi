@@ -24,6 +24,7 @@ dependencies:
 - rio
 - persistent
 - persistent-postgresql
+- esqueleto
 - monad-logger
 - say
 - wai

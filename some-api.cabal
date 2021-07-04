@@ -39,6 +39,7 @@ library
       aeson
     , base >=4.7 && <5
     , either
+    , esqueleto
     , ginger
     , libjwt-typed
     , mime-mail
@@ -70,6 +71,7 @@ executable some-api-exe
       aeson
     , base >=4.7 && <5
     , either
+    , esqueleto
     , ginger
     , libjwt-typed
     , mime-mail
@@ -103,6 +105,7 @@ test-suite some-api-test
       aeson
     , base >=4.7 && <5
     , either
+    , esqueleto
     , ginger
     , libjwt-typed
     , mime-mail
