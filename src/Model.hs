@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -54,6 +55,11 @@ data UserWithPassword =
 
 instance FromJSON UserWithPassword
 instance ToJSON UserWithPassword
+
+instance Z.HasField "userName" User Text where
+  hasField r = (\x -> r{userName=x}, userName r)
+instance Z.HasField "userEmail" User Text where
+  hasField r = (\x -> r{userEmail=x}, userEmail r)
 
 makePassword :: Text -> IO (PasswordHash Bcrypt)
 makePassword = hashPassword . mkPassword

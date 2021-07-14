@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
 
@@ -26,7 +27,7 @@ sendActivationLink user = do
   where
     host       = "smtp.gmail.com"
     from       = Address Nothing googleMail'
-    to         = [Address (Just $ userName user) (userEmail user)]
+    to         = [Address (Just $ user.userName) (user.userEmail)]
     cc         = []
     bcc        = []
     subject    = "SomeAPI Account Activation"

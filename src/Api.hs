@@ -61,7 +61,7 @@ loginUser UserWithPassword {..} = do
 
 createUser :: UserWithPassword -> App Int64
 createUser UserWithPassword {..} = do
-  let user = User { userName = name, userAge = age, userEmail = email, userActivated = Just False }
+  let user = User name age email (Just False)
   pass <- liftIO $ makePassword password
   newUser <- runDB $ insert user
   _ <- runDB . insert $ Auth {authUserId = newUser, authPassword = pass}
