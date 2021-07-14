@@ -42,6 +42,8 @@ dependencies:
 - password
 - password-instances
 - aeson
+- record-dot-preprocessor
+- record-hasfield
 
 library:
   source-dirs: src
