@@ -30,7 +30,7 @@ type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
-type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] (Key User)
+type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[PlainText] Text
 
 proxyAPI :: Proxy UserAPI
 proxyAPI = Proxy
@@ -38,7 +38,7 @@ proxyAPI = Proxy
 userSever :: ServerT UserAPI App
 userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser
 
-loginUser :: UserWithPassword -> App (Key User)
+loginUser :: UserWithPassword -> App Text
 loginUser UserWithPassword {..} = do
   auth <- runDB $
     select $ do
@@ -51,12 +51,18 @@ loginUser UserWithPassword {..} = do
     where_ (user ^. UserName ==. val name)
     where_ (user ^. UserActivated ==. val (Just True))
     pure auth
+  (Entity _ user) <- getUser name
   case auth of
     [Entity _ (Auth uid hashPass)] -> do
       let pass' = mkPassword password
       case checkPassword pass' hashPass of
         PasswordCheckFail -> throwIO err401
-        PasswordCheckSuccess -> return uid
+        PasswordCheckSuccess -> do
+          now <- getCurrentTime
+          let token = makeAuthToken user now
+          case decodeUtf8' token of
+            Left _ -> return ""
+            Right token' -> return token'
     _ -> throwIO err401
 
 createUser :: UserWithPassword -> App Int64
