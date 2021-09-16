@@ -24,19 +24,20 @@ import Model
 import Email
 import JWT
 
-type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser :<|> LoginUser
+type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser :<|> LoginUser :<|> GetProtected
 
 type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[PlainText] Text
+type GetProtected = "protected" :> MultipartForm Mem (MultipartData Mem) :> Post '[PlainText] Text
 
 proxyAPI :: Proxy UserAPI
 proxyAPI = Proxy
 
 userSever :: ServerT UserAPI App
-userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser
+userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected
 
 loginUser :: UserWithPassword -> App Text
 loginUser UserWithPassword {..} = do
@@ -59,7 +60,7 @@ loginUser UserWithPassword {..} = do
         PasswordCheckFail -> throwIO err401
         PasswordCheckSuccess -> do
           now <- getCurrentTime
-          let token = makeAuthToken user now
+          let token = makeAuthToken (Scope {protected = True, private = False}) now
           case decodeUtf8' token of
             Left _ -> return ""
             Right token' -> return token'
@@ -73,6 +74,14 @@ createUser UserWithPassword {..} = do
   _ <- runDB . insert $ Auth {authUserId = newUser, authPassword = pass}
   liftIO $ sendActivationLink user
   return $ fromSqlKey newUser
+
+getProtected :: MultipartData Mem -> App Text
+getProtected formData = do
+  let token = getFormInput formData
+  eScope <- liftIO . decodeAndValidateFullAuth $ encodeUtf8 token
+  case eScope of
+    Left err_ -> throwIO err401
+    Right Scope {..} -> if protected then return "access granted" else throwIO err401
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do

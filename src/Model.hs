@@ -19,7 +19,7 @@ module Model where
 import RIO
 import qualified Database.Persist.TH as PTH
 import Database.Persist (Entity(..))
-import Database.Persist.Sql (toSqlKey)
+import Database.Persist.Sql (Key(..), toSqlKey)
 import Database.Persist.Postgresql 
   (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
@@ -28,6 +28,7 @@ import Data.Password.Bcrypt
 import Data.Password.Instances
 import App (App, Env(..))
 import Say
+import Libjwt.Classes
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
@@ -60,6 +61,9 @@ instance Z.HasField "userName" User Text where
   hasField r = (\x -> r{userName=x}, userName r)
 instance Z.HasField "userEmail" User Text where
   hasField r = (\x -> r{userEmail=x}, userEmail r)
+
+data Scope = Scope { protected :: Bool, private :: Bool }
+  deriving stock (Show, Eq, Generic)
 
 makePassword :: Text -> IO (PasswordHash Bcrypt)
 makePassword = hashPassword . mkPassword
