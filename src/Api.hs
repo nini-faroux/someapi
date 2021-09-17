@@ -27,7 +27,7 @@ import JWT
 
 type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser :<|> LoginUser :<|> GetProtected
 
-type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
+type GetUser = "user" :> ReqBody '[JSON] User :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
@@ -53,7 +53,7 @@ loginUser UserWithPassword {..} = do
     where_ (user ^. UserName ==. val name)
     where_ (user ^. UserActivated ==. val (Just True))
     pure auth
-  (Entity _ user) <- getUser name
+  (Entity _ user) <- getUser $ User name Nothing email Nothing
   case auth of
     [Entity _ (Auth uid hashPass)] -> do
       let pass' = mkPassword password
@@ -105,9 +105,9 @@ getFormInput formData = token
 getUsers :: App [Entity User]
 getUsers = runDB $ P.selectList [] []
 
-getUser :: Text -> App (Entity User)
-getUser name = do
-  mUser <- runDB $ P.selectFirst [UserName P.==. name] []
+getUser :: User -> App (Entity User)
+getUser User {..} = do
+  mUser <- runDB $ P.selectFirst [UserName P.==. userName, UserEmail P.==. userEmail] []
   case mUser of
     Nothing -> throwIO err404
     Just user -> return user
