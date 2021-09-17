@@ -90,11 +90,11 @@ activateUserAccount formData = do
   case eUser of
     Left err -> throwIO err404
     Right user -> do
-      _ <- runDB $ P.updateWhere [UserEmail P.==. userEmail user,
-                                  UserName P.==. userName user,
+      _ <- runDB $ P.updateWhere [UserEmail P.==. user.userEmail,
+                                  UserName P.==. user.userName,
                                   UserActivated P.==. Just False]
                                  [UserActivated P.=. Just True]
-      runDB $ P.selectFirst [UserEmail P.==. userEmail user] []
+      runDB $ P.selectFirst [UserEmail P.==. user.userEmail] []
 
 getFormInput :: MultipartData Mem -> Text
 getFormInput formData = token
