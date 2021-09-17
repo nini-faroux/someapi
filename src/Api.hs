@@ -70,11 +70,20 @@ loginUser UserWithPassword {..} = do
 createUser :: UserWithPassword -> App Int64
 createUser UserWithPassword {..} = do
   let user = User name age email (Just False)
-  pass <- liftIO $ makePassword password
-  newUser <- runDB $ insert user
-  _ <- runDB . insert $ Auth {authUserId = newUser, authPassword = pass}
-  liftIO $ sendActivationLink user
-  return $ fromSqlKey newUser
+  exists <- emailExists user
+  if exists then throwIO err403
+  else do
+    pass <- liftIO $ makePassword password
+    newUser <- runDB $ insert user
+    _ <- runDB . insert $ Auth {authUserId = newUser, authPassword = pass}
+    liftIO $ sendActivationLink user
+    return $ fromSqlKey newUser
+  where
+    emailExists User {..} = do
+      mUser <- runDB $ P.selectFirst [UserEmail P.==. userEmail] []
+      case mUser of
+        Nothing -> return False
+        _ -> return True
 
 getProtected :: Token -> App Text
 getProtected (Token uName token) = do
