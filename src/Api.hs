@@ -41,18 +41,8 @@ userSever :: ServerT UserAPI App
 userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected
 
 loginUser :: UserWithPassword -> App Token
-loginUser UserWithPassword {..} = do
-  auth <- runDB $
-    select $ do
-    (user :& auth) <-
-        from $
-        table @User `InnerJoin` table @Auth
-        `on`
-        (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
-    where_ (user ^. UserEmail ==. val email)
-    where_ (user ^. UserName ==. val name)
-    where_ (user ^. UserActivated ==. val (Just True))
-    pure auth
+loginUser userWP@UserWithPassword {..} = do
+  auth <- getAuth userWP
   (Entity _ user) <- getUser $ User name Nothing email Nothing
   case auth of
     [Entity _ (Auth uid hashPass)] -> do
@@ -66,6 +56,20 @@ loginUser UserWithPassword {..} = do
             Left _ -> return $ Token "" ""
             Right token' -> return $ Token (user.userName) token'
     _ -> throwIO err401
+
+getAuth :: UserWithPassword -> App [Entity Auth]
+getAuth UserWithPassword {..} =
+  runDB $
+      select $ do
+      (user :& auth) <-
+          from $
+          table @User `InnerJoin` table @Auth
+          `on`
+          (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
+      where_ (user ^. UserEmail ==. val email)
+      where_ (user ^. UserName ==. val name)
+      where_ (user ^. UserActivated ==. val (Just True))
+      pure auth
 
 createUser :: UserWithPassword -> App Int64
 createUser UserWithPassword {..} = do
