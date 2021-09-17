@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
@@ -30,8 +31,8 @@ type GetUser = "user" :> Capture "name" Text :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
-type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[PlainText] Text
-type GetProtected = "protected" :> MultipartForm Mem (MultipartData Mem) :> Post '[PlainText] Text
+type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Token
+type GetProtected = "protected" :> ReqBody '[JSON] Token :> Post '[PlainText] Text
 
 proxyAPI :: Proxy UserAPI
 proxyAPI = Proxy
@@ -39,7 +40,7 @@ proxyAPI = Proxy
 userSever :: ServerT UserAPI App
 userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected
 
-loginUser :: UserWithPassword -> App Text
+loginUser :: UserWithPassword -> App Token
 loginUser UserWithPassword {..} = do
   auth <- runDB $
     select $ do
@@ -62,8 +63,8 @@ loginUser UserWithPassword {..} = do
           now <- getCurrentTime
           let token = makeAuthToken (Scope {protected = True, private = False}) now
           case decodeUtf8' token of
-            Left _ -> return ""
-            Right token' -> return token'
+            Left _ -> return $ Token "" ""
+            Right token' -> return $ Token (user.userName) token'
     _ -> throwIO err401
 
 createUser :: UserWithPassword -> App Int64
@@ -75,13 +76,12 @@ createUser UserWithPassword {..} = do
   liftIO $ sendActivationLink user
   return $ fromSqlKey newUser
 
-getProtected :: MultipartData Mem -> App Text
-getProtected formData = do
-  let token = getFormInput formData
+getProtected :: Token -> App Text
+getProtected (Token uName token) = do
   eScope <- liftIO . decodeAndValidateFullAuth $ encodeUtf8 token
   case eScope of
     Left err_ -> throwIO err401
-    Right Scope {..} -> if protected then return "access granted" else throwIO err401
+    Right Scope {..} -> if protected then return ("hi " <> uName <> ", access granted") else throwIO err401
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do

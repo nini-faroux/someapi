@@ -65,6 +65,12 @@ instance Z.HasField "userEmail" User Text where
 data Scope = Scope { protected :: Bool, private :: Bool }
   deriving stock (Show, Eq, Generic)
 
+data Token = Token { tokenName :: !Text, token :: !Text }
+  deriving (Eq, Show, Generic)
+
+instance FromJSON Token
+instance ToJSON Token
+
 makePassword :: Text -> IO (PasswordHash Bcrypt)
 makePassword = hashPassword . mkPassword
 
