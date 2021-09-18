@@ -44,6 +44,7 @@ dependencies:
 - aeson
 - record-dot-preprocessor
 - record-hasfield
+- monad-time
 
 library:
   source-dirs: src

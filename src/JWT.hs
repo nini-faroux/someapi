@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeOperators    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module JWT where
 
@@ -14,76 +15,73 @@ import Servant.Auth.Server (def)
 import Control.Arrow (left)
 import Control.Exception (catch, displayException)
 import Data.Either.Validation (validationToEither)
+import Control.Monad.Time
 import Model
 import Config
 
-makeToken :: User -> UTCTime -> ByteString
-makeToken user = getToken . sign hmac512 <$> mkPayload user
+makeUserToken :: User -> UTCTime -> ByteString
+makeUserToken User {..} = makeToken claims 7200
   where
-    mkPayload User {..} currentTime =
+    claims = ( #userName ->> userName
+             , #userAge ->> userAge
+             , #userEmail ->> userEmail
+             , #userActivated ->> userActivated
+             )
+
+makeAuthToken :: Scope -> UTCTime -> ByteString
+makeAuthToken Scope {..} = makeToken claims 900
+  where claims = (#protected ->> protected, #private ->> private)
+
+makeToken :: (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>
+  a -> NominalDiffTime -> UTCTime -> ByteString
+makeToken privateClaims' seconds = getToken . sign hmac512 <$> mkPayload
+  where
+    mkPayload currentTime =
       let now = fromUTC currentTime
-      in  def
-            { iss           = Iss (Just "someapi")
-            , aud           = Aud ["someapi"]
-            , iat           = Iat (Just now)
-            , LJ.exp        = Exp (Just $ now `plusSeconds` 7200)
-            , privateClaims = toPrivateClaims
-                                ( #userName ->> userName
-                                , #userAge ->> userAge
-                                , #userEmail ->> userEmail
-                                , #userActivated ->> userActivated
-                                )
-            }
+      in def
+        { iss = Iss (Just "someapi")
+        , aud = Aud ["someapi"]
+        , iat = Iat (Just now)
+        , LJ.exp = Exp (Just $ now `plusSeconds` seconds)
+        , privateClaims = toPrivateClaims privateClaims'
+        }
 
 type UserJwt
   = Jwt '["userName" ->> Text, "userAge" ->> Maybe Int, "userEmail" ->> Text, "userActivated" ->> Maybe Bool] 'NoNs
 
+type AuthJwt = Jwt '["protected" ->> Bool, "private" ->> Bool] 'NoNs
+
 instance ToPrivateClaims User
 instance FromPrivateClaims User
-
-decodeAndValidateFull :: ByteString -> IO (Either String User)
-decodeAndValidateFull token = 
-  (left (("Token not valid: " ++) . show) . fmap toUser . validationToEither <$> decodeAndValidate token) `catch` onError
- where
-  toUser = fromPrivateClaims . privateClaims . payload . getValid
-  onError (e :: SomeDecodeException) =
-    return $ Left $ "Cannot decode token " ++ displayException e
-
-decodeAndValidate :: ByteString -> IO (ValidationNEL ValidationFailure (Validated UserJwt))
-decodeAndValidate = jwtFromByteString settings mempty hmac512
-  where settings = Settings { leeway = 20, appName = Just "someapi" }
-
---
-
-makeAuthToken :: Scope -> UTCTime -> ByteString
-makeAuthToken scope = getToken . sign hmac512 <$> mkPayload scope
-  where
-    mkPayload Scope {..} currentTime =
-      let now = fromUTC currentTime
-      in  def
-            { iss           = Iss (Just "someapi")
-            , aud           = Aud ["someapi"]
-            , iat           = Iat (Just now)
-            , LJ.exp        = Exp (Just $ now `plusSeconds` 900)
-            , privateClaims = toPrivateClaims
-                                ( #protected ->> protected
-                                , #private ->> private
-                                )
-            }
-
-type AuthJwt = Jwt '["protected" ->> Bool, "private" ->> Bool] 'NoNs
 
 instance ToPrivateClaims Scope
 instance FromPrivateClaims Scope
 
-decodeAndValidateFullAuth :: ByteString -> IO (Either String Scope)
-decodeAndValidateFullAuth token =
-  (left (("Invalid token: " ++) . show) . fmap toScope . validationToEither <$> decodeAndValidateAuth token) `catch` onError
+decodeAndValidateUser :: ByteString -> IO (Either String User)
+decodeAndValidateUser = decodeAndValidateFull decodeAndValidateUser'
+
+decodeAndValidateAuth :: ByteString -> IO (Either String Scope)
+decodeAndValidateAuth = decodeAndValidateFull decodeAndValidateAuth'
+
+decodeAndValidateUser' :: ByteString -> IO (ValidationNEL ValidationFailure (Validated UserJwt))
+decodeAndValidateUser' = decodeAndValidate
+
+decodeAndValidateAuth' :: ByteString -> IO (ValidationNEL ValidationFailure (Validated AuthJwt))
+decodeAndValidateAuth' = decodeAndValidate
+
+decodeAndValidateFull
+  :: (Show e, FromPrivateClaims b) =>
+     (ByteString -> IO (ValidationNEL e (Validated (Jwt (Claims b) namespace))))
+  -> ByteString
+  -> IO (Either String b)
+decodeAndValidateFull decode token = 
+  (left (("Token not valid: " ++) . show) . fmap toInnerType . validationToEither <$> decode token) `catch` onError
  where
-  toScope = fromPrivateClaims . privateClaims . payload . getValid
+  toInnerType = fromPrivateClaims . privateClaims . payload . getValid
   onError (e :: SomeDecodeException) =
     return $ Left $ "Cannot decode token " ++ displayException e
 
-decodeAndValidateAuth :: ByteString -> IO (ValidationNEL ValidationFailure (Validated AuthJwt))
-decodeAndValidateAuth = jwtFromByteString settings mempty hmac512
+decodeAndValidate :: (Decode (PrivateClaims a b), MonadTime m, MonadThrow m) => 
+  ByteString -> m (ValidationNEL ValidationFailure (Validated (Jwt a b)))
+decodeAndValidate = jwtFromByteString settings mempty hmac512
   where settings = Settings { leeway = 5, appName = Just "someapi" }

@@ -91,7 +91,7 @@ createUser UserWithPassword {..} = do
 
 getProtected :: Token -> App Text
 getProtected (Token uName token) = do
-  eScope <- liftIO . decodeAndValidateFullAuth $ encodeUtf8 token
+  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 token
   case eScope of
     Left err_ -> throwIO err401
     Right Scope {..} -> if protected then return ("hi " <> uName <> ", access granted") else throwIO err401
@@ -99,7 +99,7 @@ getProtected (Token uName token) = do
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
   let token = getFormInput formData
-  eUser <- liftIO . decodeAndValidateFull $ encodeUtf8 token
+  eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
   case eUser of
     Left err -> throwIO err404
     Right user -> do

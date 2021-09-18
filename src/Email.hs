@@ -20,7 +20,7 @@ import JWT
 sendActivationLink :: User -> IO ()
 sendActivationLink user = do
   now <- getCurrentTime
-  let token = makeToken user now
+  let token = makeUserToken user now
   let urlHtml = htmlPart $ TL.fromStrict $ urlText user token
       mail = simpleMail from to cc bcc subject [body, urlHtml]
   sendMailWithLoginTLS host googleMail googlePass mail

@@ -44,6 +44,7 @@ library
     , libjwt-typed
     , mime-mail
     , monad-logger
+    , monad-time
     , mtl
     , password
     , password-instances
@@ -78,6 +79,7 @@ executable some-api-exe
     , libjwt-typed
     , mime-mail
     , monad-logger
+    , monad-time
     , mtl
     , password
     , password-instances
@@ -114,6 +116,7 @@ test-suite some-api-test
     , libjwt-typed
     , mime-mail
     , monad-logger
+    , monad-time
     , mtl
     , password
     , password-instances
