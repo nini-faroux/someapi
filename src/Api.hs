@@ -34,8 +34,8 @@ type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post 
 type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Token
 type GetProtected = "protected" :> ReqBody '[JSON] Token :> Post '[PlainText] Text
 
-proxyAPI :: Proxy UserAPI
-proxyAPI = Proxy
+userApi :: Proxy UserAPI
+userApi = Proxy
 
 userSever :: ServerT UserAPI App
 userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected
@@ -126,6 +126,6 @@ getUser User {..} = do
     Just user -> return user
 
 hoistAppServer :: Env -> Server UserAPI
-hoistAppServer env' = hoistServer proxyAPI (transform env') userSever where
+hoistAppServer env' = hoistServer userApi (transform env') userSever where
   transform :: Env -> App a -> Handler a
   transform env app = Handler $ ExceptT $ try $ runRIO env app

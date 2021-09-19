@@ -32,6 +32,7 @@ dependencies:
 - servant
 - servant-server
 - servant-multipart
+- servant-docs
 - mtl
 - smtp-mail
 - mime-mail

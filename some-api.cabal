@@ -28,6 +28,7 @@ library
       Api
       App
       Config
+      Docs
       Email
       JWT
       Model
@@ -56,6 +57,7 @@ library
     , say
     , servant
     , servant-auth-server
+    , servant-docs
     , servant-multipart
     , servant-server
     , smtp-mail
@@ -91,6 +93,7 @@ executable some-api-exe
     , say
     , servant
     , servant-auth-server
+    , servant-docs
     , servant-multipart
     , servant-server
     , smtp-mail
@@ -128,6 +131,7 @@ test-suite some-api-test
     , say
     , servant
     , servant-auth-server
+    , servant-docs
     , servant-multipart
     , servant-server
     , smtp-mail
