@@ -62,8 +62,9 @@ instance Z.HasField "userName" User Text where
 instance Z.HasField "userEmail" User Text where
   hasField r = (\x -> r{userEmail=x}, userEmail r)
 
-data Scope = Scope { protected :: Bool, private :: Bool }
+data Scope = Scope { protectedAccess :: Bool, privateAccess :: Bool }
   deriving stock (Show, Eq, Generic)
+data ScopeField = Protected | Private deriving Eq
 
 data Token = Token { tokenName :: !Text, token :: !Text }
   deriving (Eq, Show, Generic)

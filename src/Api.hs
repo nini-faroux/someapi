@@ -23,7 +23,7 @@ import Model
 import Email
 import JWT
 
-type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser :<|> LoginUser :<|> GetProtected
+type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser :<|> LoginUser :<|> GetProtected :<|> GetPrivate
 
 type GetUser = "user" :> ReqBody '[JSON] User :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
@@ -31,12 +31,13 @@ type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Token
 type GetProtected = "protected" :> ReqBody '[JSON] Token :> Post '[PlainText] Text
+type GetPrivate = "private" :> ReqBody '[JSON] Token :> Post '[PlainText] Text
 
 userApi :: Proxy UserAPI
 userApi = Proxy
 
 userServer :: ServerT UserAPI App
-userServer = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected
+userServer = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected :<|> getPrivate
 
 loginUser :: UserWithPassword -> App Token
 loginUser userWP@UserWithPassword {..} = do
@@ -49,7 +50,7 @@ loginUser userWP@UserWithPassword {..} = do
         PasswordCheckFail -> throwIO err401
         PasswordCheckSuccess -> do
           now <- getCurrentTime
-          let token = makeAuthToken (Scope {protected = True, private = False}) now
+          let token = makeAuthToken (Scope {protectedAccess = True, privateAccess = False}) now
           case decodeUtf8' token of
             Left _ -> return $ Token "" ""
             Right token' -> return $ Token (user.userName) token'
@@ -88,11 +89,20 @@ createUser UserWithPassword {..} = do
         _ -> return True
 
 getProtected :: Token -> App Text
-getProtected (Token uName token) = do
+getProtected token = getProtectedResource token Protected
+
+getPrivate :: Token -> App Text
+getPrivate token = getProtectedResource token Private
+
+getProtectedResource :: Token -> ScopeField -> App Text
+getProtectedResource (Token uName token) scopeField = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 token
   case eScope of
     Left err_ -> throwIO err401
-    Right Scope {..} -> if protected then return ("hi " <> uName <> ", access granted") else throwIO err401
+    Right Scope {..} -> case scopeField of
+      Protected -> if protectedAccess then return (greet "protected") else throwIO err401
+      Private -> if privateAccess then return (greet "private") else throwIO err401
+    where greet resourceName = "hi " <> uName <> ", access granted to " <> resourceName <> " resource"
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
