@@ -7,11 +7,10 @@
 
 module Api where
 
-import RIO hiding (Handler, (^.), on)
+import RIO hiding ((^.), on)
 import RIO.Time
 import RIO.List (headMaybe)
 import Servant
-import Servant.Server
 import Servant.Multipart
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental 
@@ -19,7 +18,6 @@ import Database.Esqueleto.Experimental
   select, from, on, table, val, where_, insert, fromSqlKey, val,
   (==.), (=.), (^.), (:&)(..))
 import Data.Password.Bcrypt
-import Control.Monad.Except
 import App
 import Model
 import Email
@@ -37,8 +35,8 @@ type GetProtected = "protected" :> ReqBody '[JSON] Token :> Post '[PlainText] Te
 userApi :: Proxy UserAPI
 userApi = Proxy
 
-userSever :: ServerT UserAPI App
-userSever = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected
+userServer :: ServerT UserAPI App
+userServer = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected
 
 loginUser :: UserWithPassword -> App Token
 loginUser userWP@UserWithPassword {..} = do
@@ -124,8 +122,3 @@ getUser User {..} = do
   case mUser of
     Nothing -> throwIO err404
     Just user -> return user
-
-hoistAppServer :: Env -> Server UserAPI
-hoistAppServer env' = hoistServer userApi (transform env') userSever where
-  transform :: Env -> App a -> Handler a
-  transform env app = Handler $ ExceptT $ try $ runRIO env app

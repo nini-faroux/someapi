@@ -32,17 +32,22 @@ library
       Email
       JWT
       Model
+      Server
   other-modules:
       Paths_some_api
   hs-source-dirs:
       src
   build-depends:
       aeson
+    , aeson-pretty
     , base >=4.7 && <5
+    , bytestring
     , either
     , esqueleto
     , ginger
+    , http-types
     , libjwt-typed
+    , microlens
     , mime-mail
     , monad-logger
     , monad-time
@@ -57,10 +62,12 @@ library
     , say
     , servant
     , servant-auth-server
-    , servant-docs
     , servant-multipart
     , servant-server
+    , servant-swagger
     , smtp-mail
+    , swagger2
+    , text
     , wai
     , warp
   default-language: Haskell2010
@@ -74,11 +81,15 @@ executable some-api-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , aeson-pretty
     , base >=4.7 && <5
+    , bytestring
     , either
     , esqueleto
     , ginger
+    , http-types
     , libjwt-typed
+    , microlens
     , mime-mail
     , monad-logger
     , monad-time
@@ -93,11 +104,13 @@ executable some-api-exe
     , say
     , servant
     , servant-auth-server
-    , servant-docs
     , servant-multipart
     , servant-server
+    , servant-swagger
     , smtp-mail
     , some-api
+    , swagger2
+    , text
     , wai
     , warp
   default-language: Haskell2010
@@ -112,11 +125,15 @@ test-suite some-api-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , aeson-pretty
     , base >=4.7 && <5
+    , bytestring
     , either
     , esqueleto
     , ginger
+    , http-types
     , libjwt-typed
+    , microlens
     , mime-mail
     , monad-logger
     , monad-time
@@ -131,11 +148,13 @@ test-suite some-api-test
     , say
     , servant
     , servant-auth-server
-    , servant-docs
     , servant-multipart
     , servant-server
+    , servant-swagger
     , smtp-mail
     , some-api
+    , swagger2
+    , text
     , wai
     , warp
   default-language: Haskell2010

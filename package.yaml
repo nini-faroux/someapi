@@ -21,6 +21,13 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- servant
+- servant-server
+- servant-multipart
+- servant-swagger
+- swagger2
+- aeson-pretty
+- http-types
 - rio
 - persistent
 - persistent-postgresql
@@ -29,10 +36,6 @@ dependencies:
 - say
 - wai
 - warp
-- servant
-- servant-server
-- servant-multipart
-- servant-docs
 - mtl
 - smtp-mail
 - mime-mail
@@ -46,6 +49,9 @@ dependencies:
 - record-dot-preprocessor
 - record-hasfield
 - monad-time
+- text
+- bytestring
+- microlens
 
 library:
   source-dirs: src

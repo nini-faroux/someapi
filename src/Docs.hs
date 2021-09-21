@@ -1,45 +1,60 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Docs where
 
 import RIO
-import Servant.Docs
+import RIO.Text (pack)
+import Lens.Micro
 import Servant.Multipart
+import Database.Persist.Sql (Entity(..), toSqlKey)
+import qualified Data.ByteString.Lazy.Char8 as LB
+import Servant
+import Servant.Swagger
+import Data.Swagger
+import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Aeson
 import Model
 import Api
-import Database.Persist.Sql (Entity(..), toSqlKey)
 
-apiDocs :: API
-apiDocs = docs userApi
+writeSwaggerJSON :: IO ()
+writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
 
-instance ToSample (Entity User) where
-  toSamples _ = singleSample entityUserSample
+type SwaggerAPI = "api.json" :> Get '[JSON] Swagger
 
-instance ToSample User where
-  toSamples _ = singleSample userSample
+userSwagger :: Swagger
+userSwagger = toSwagger userApi
+  & info.title   .~ "some API"
+  & info.version .~ "1.0"
+  & info.description ?~ "some api"
+  & info.license ?~ ("MIT" & url ?~ URL "http://mit.com")
 
-instance ToSample UserWithPassword where
-  toSamples _ = singleSample userWPSample
+instance ToSchema User where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "User"
+    & mapped.schema.example ?~ toJSON userSample
 
-instance ToSample Int64 where
-  toSamples _ = singleSample 64
+instance ToSchema UserWithPassword where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "User with a password"
+    & mapped.schema.example ?~ toJSON userWPSample
 
-instance ToSample Token where
-  toSamples _ = singleSample tokenSample
+instance ToSchema Token where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "User token"
+    & mapped.schema.example ?~ toJSON tokenSample
 
-instance ToSample Text where
-  toSamples _ = singleSample "some text"
+instance HasSwagger  (MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))) where
+  toSwagger _ = mempty
 
-instance ToMultipartSample Mem (MultipartData Mem) where
-  toMultipartSamples proxy =
-    [("sample 1"
-     , MultipartData 
-       [Input "token" token']
-       [FileData "" "" "" ""]
-     )
-    ]
+instance ToSchema (Entity User) where
+  declareNamedSchema proxy = pure $ NamedSchema Nothing mempty
+
+instance ToSchema (Key User) where
+  declareNamedSchema _ = pure $ NamedSchema Nothing mempty
 
 entityUserSample :: Entity User
 entityUserSample = Entity (toSqlKey 1) (User "nini" (Just 100) "nini@mail.com" (Just True))
@@ -54,4 +69,4 @@ tokenSample :: Token
 tokenSample = Token "nini" token'
 
 token' :: Text
-token' = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsic29tZWFwaSJdLCJleHAiOjE2MzE5NjU3MDcsImlhdCI6MTYzMTk2NDgwNywiaXNzIjoic29tZWFwaSIsInByaXZhdGUiOmZhbHNlLCJwcm90ZWN0ZWQiOnRydWV9.CTEFPu36V0NEHRkWL_IV4rJ4J87CL1Irac0Mn99x6lRslYvXLVDaabyDkhV_QqyOeAtq95x4hIAeSJIhE03hT"
+token' = "eyjhbgcioijiuzuxmiisinr5cci6ikpxvcj9.eyJhdWQiOlsic29tZWFwaSJdLCJleHAiOjE2MzE5NjU3MDcsImlhdCI6MTYzMTk2NDgwNywiaXNzIjoic29tZWFwaSIsInByaXZhdGUiOmZhbHNlLCJwcm90ZWN0ZWQiOnRydWV9.CTEFPu36V0NEHRkWL_IV4rJ4J87CL1Irac0Mn99x6lRslYvXLVDaabyDkhV_QqyOeAtq95x4hIAeSJIhE03hT"
