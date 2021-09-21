@@ -100,8 +100,8 @@ getProtectedResource (Token uName token) scopeField = do
   case eScope of
     Left err_ -> throwIO err401
     Right Scope {..} -> case scopeField of
-      Protected -> if protectedAccess then return (greet "protected") else throwIO err401
-      Private -> if privateAccess then return (greet "private") else throwIO err401
+      Protected -> if protectedAccess then return (greet "protected") else throwIO err403
+      Private -> if privateAccess then return (greet "private") else throwIO err403
     where greet resourceName = "hi " <> uName <> ", access granted to " <> resourceName <> " resource"
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
