@@ -29,6 +29,7 @@ import Data.Password.Instances
 import App (App, Env(..))
 import Say
 import Libjwt.Classes
+import Web.HttpApiData
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
@@ -66,8 +67,8 @@ data Scope = Scope { protectedAccess :: Bool, privateAccess :: Bool }
   deriving stock (Show, Eq, Generic)
 data ScopeField = Protected | Private deriving Eq
 
-data Token = Token { tokenName :: !Text, token :: !Text }
-  deriving (Eq, Show, Generic)
+newtype Token = Token { token :: Text }
+  deriving (Eq, Show, Generic, FromHttpApiData, ToHttpApiData)
 
 instance FromJSON Token
 instance ToJSON Token

@@ -10,6 +10,7 @@ module Api where
 import RIO hiding ((^.), on)
 import RIO.Time
 import RIO.List (headMaybe)
+import qualified Data.Text as T
 import Servant
 import Servant.Multipart
 import qualified Database.Persist as P
@@ -18,6 +19,7 @@ import Database.Esqueleto.Experimental
   select, from, on, table, val, where_, insert, fromSqlKey, val,
   (==.), (=.), (^.), (:&)(..))
 import Data.Password.Bcrypt
+import qualified Data.ByteString.Lazy.UTF8 as LB
 import App
 import Model
 import Email
@@ -30,8 +32,8 @@ type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Token
-type GetProtected = "protected" :> ReqBody '[JSON] Token :> Post '[PlainText] Text
-type GetPrivate = "private" :> ReqBody '[JSON] Token :> Post '[PlainText] Text
+type GetProtected = "protected" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[PlainText] Text
+type GetPrivate = "private" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[PlainText] Text
 
 userApi :: Proxy UserAPI
 userApi = Proxy
@@ -47,14 +49,14 @@ loginUser userWP@UserWithPassword {..} = do
     [Entity _ (Auth uid hashPass)] -> do
       let pass' = mkPassword password
       case checkPassword pass' hashPass of
-        PasswordCheckFail -> throwIO err401
+        PasswordCheckFail -> throwIO err401 { errBody = "Wrong password" }
         PasswordCheckSuccess -> do
           now <- getCurrentTime
           let token = makeAuthToken (Scope {protectedAccess = True, privateAccess = False}) now
           case decodeUtf8' token of
-            Left _ -> return $ Token "" ""
-            Right token' -> return $ Token (user.userName) token'
-    _ -> throwIO err401
+            Left _ -> return $ Token ""
+            Right token' -> return $ Token token'
+    _ -> throwIO err401 { errBody = "Authentication failed" }
 
 getAuth :: UserWithPassword -> App [Entity Auth]
 getAuth UserWithPassword {..} =
@@ -88,21 +90,23 @@ createUser UserWithPassword {..} = do
         Nothing -> return False
         _ -> return True
 
-getProtected :: Token -> App Text
-getProtected token = getProtectedResource token Protected
+getProtected :: Text -> Maybe Token -> App Text
+getProtected = getProtectedResource Protected
 
-getPrivate :: Token -> App Text
-getPrivate token = getProtectedResource token Private
+getPrivate :: Text -> Maybe Token -> App Text
+getPrivate = getProtectedResource Private
 
-getProtectedResource :: Token -> ScopeField -> App Text
-getProtectedResource (Token uName token) scopeField = do
-  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 token
+-- | Trim token before decoding to remove 'Bearer' prefix, otherwise invalid token error
+getProtectedResource :: ScopeField -> Text -> Maybe Token -> App Text
+getProtectedResource _ _ Nothing = throwIO err401 { errBody = "no token found" }
+getProtectedResource scopeField txt (Just (Token token)) = do
+  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
   case eScope of
-    Left err_ -> throwIO err401
+    Left err -> throwIO err401 { errBody = LB.fromString err}
     Right Scope {..} -> case scopeField of
       Protected -> if protectedAccess then return (greet "protected") else throwIO err403
       Private -> if privateAccess then return (greet "private") else throwIO err403
-    where greet resourceName = "hi " <> uName <> ", access granted to " <> resourceName <> " resource"
+    where greet resourceName = "access granted to " <> resourceName <> " resource"
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do

@@ -56,6 +56,9 @@ instance ToSchema (Entity User) where
 instance ToSchema (Key User) where
   declareNamedSchema _ = pure $ NamedSchema Nothing mempty
 
+instance ToParamSchema Token where
+  toParamSchema _ = toParamSchema (Proxy :: Proxy Text)
+
 entityUserSample :: Entity User
 entityUserSample = Entity (toSqlKey 1) (User "nini" (Just 100) "nini@mail.com" (Just True))
 
@@ -66,7 +69,7 @@ userWPSample :: UserWithPassword
 userWPSample = UserWithPassword "nini" (Just 100) "nini@mail.com" "pass"
 
 tokenSample :: Token
-tokenSample = Token "nini" token'
+tokenSample = Token token'
 
 token' :: Text
 token' = "eyjhbgcioijiuzuxmiisinr5cci6ikpxvcj9.eyJhdWQiOlsic29tZWFwaSJdLCJleHAiOjE2MzE5NjU3MDcsImlhdCI6MTYzMTk2NDgwNywiaXNzIjoic29tZWFwaSIsInByaXZhdGUiOmZhbHNlLCJwcm90ZWN0ZWQiOnRydWV9.CTEFPu36V0NEHRkWL_IV4rJ4J87CL1Irac0Mn99x6lRslYvXLVDaabyDkhV_QqyOeAtq95x4hIAeSJIhE03hT"

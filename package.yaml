@@ -28,6 +28,7 @@ dependencies:
 - swagger2
 - aeson-pretty
 - http-types
+- http-api-data
 - rio
 - persistent
 - persistent-postgresql
@@ -51,6 +52,7 @@ dependencies:
 - monad-time
 - text
 - bytestring
+- utf8-string
 - microlens
 
 library:
