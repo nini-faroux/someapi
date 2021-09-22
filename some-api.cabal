@@ -43,8 +43,10 @@ library
     , base >=4.7 && <5
     , bytestring
     , either
+    , email-validate
     , esqueleto
     , ginger
+    , http-api-data
     , http-types
     , libjwt-typed
     , microlens
@@ -68,6 +70,7 @@ library
     , smtp-mail
     , swagger2
     , text
+    , utf8-string
     , wai
     , warp
   default-language: Haskell2010
@@ -85,8 +88,10 @@ executable some-api-exe
     , base >=4.7 && <5
     , bytestring
     , either
+    , email-validate
     , esqueleto
     , ginger
+    , http-api-data
     , http-types
     , libjwt-typed
     , microlens
@@ -111,6 +116,7 @@ executable some-api-exe
     , some-api
     , swagger2
     , text
+    , utf8-string
     , wai
     , warp
   default-language: Haskell2010
@@ -129,8 +135,10 @@ test-suite some-api-test
     , base >=4.7 && <5
     , bytestring
     , either
+    , email-validate
     , esqueleto
     , ginger
+    , http-api-data
     , http-types
     , libjwt-typed
     , microlens
@@ -155,6 +163,7 @@ test-suite some-api-test
     , some-api
     , swagger2
     , text
+    , utf8-string
     , wai
     , warp
   default-language: Haskell2010

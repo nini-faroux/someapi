@@ -54,6 +54,7 @@ dependencies:
 - bytestring
 - utf8-string
 - microlens
+- email-validate
 
 library:
   source-dirs: src

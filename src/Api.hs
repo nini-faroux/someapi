@@ -20,6 +20,7 @@ import Database.Esqueleto.Experimental
   (==.), (=.), (^.), (:&)(..))
 import Data.Password.Bcrypt
 import qualified Data.ByteString.Lazy.UTF8 as LB
+import qualified Text.Email.Validate as EV
 import App
 import Model
 import Email
@@ -77,22 +78,32 @@ getAuth UserWithPassword {..} =
       pure auth
 
 createUser :: UserWithPassword -> App Int64
-createUser UserWithPassword {..} = do
-  let user = User name age email (Just False)
-  exists <- emailExists user
-  if exists then throwIO err403
-  else do
+createUser uwp@UserWithPassword {..} = do
+    user <- parseUser uwp
     pass <- liftIO $ makePassword password
-    newUser <- runDB $ insert user
-    _ <- runDB . insert $ Auth {authUserId = newUser, authPassword = pass}
+    newUserId <- runDB $ insert user
+    _ <- runDB . insert $ Auth {authUserId = newUserId, authPassword = pass}
     liftIO $ sendActivationLink user
-    return $ fromSqlKey newUser
+    return $ fromSqlKey newUserId
+
+parseUser :: UserWithPassword -> App User
+parseUser user@UserWithPassword {..} = do
+  exists <- emailExists email
+  if exists then throwIO err400 { errBody = "Email already exists" }
+  else if not $ validEmail email then throwIO err400 { errBody = "Invalid email addresss" }
+  else if not $ validAge age then throwIO err400 { errBody = "Invalid user age" }
+  else return $ User name age email (Just False)
   where
-    emailExists User {..} = do
-      mUser <- runDB $ P.selectFirst [UserEmail P.==. userEmail] []
+    emailExists email = do
+      mUser <- runDB $ P.selectFirst [UserEmail P.==. email] []
       case mUser of
         Nothing -> return False
         _ -> return True
+    validEmail email = EV.isValid $ encodeUtf8 email
+    validAge Nothing = True
+    validAge (Just age)
+      | age >= 0 && age <= 120 = True
+      | otherwise = False
 
 getProtected :: Text -> Maybe Token -> App Text
 getProtected = getProtectedResource Protected
