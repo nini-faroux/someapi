@@ -25,7 +25,14 @@ import Model
 import Email
 import JWT
 
-type UserAPI = GetUsers :<|> GetUser :<|> CreateUser :<|> ActivateUser :<|> LoginUser :<|> GetProtected :<|> GetPrivate
+type UserAPI =
+       GetUsers
+  :<|> GetUser
+  :<|> CreateUser
+  :<|> ActivateUser
+  :<|> LoginUser
+  :<|> GetProtected
+  :<|> GetPrivate
 
 type GetUser = "user" :> ReqBody '[JSON] User :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
@@ -37,9 +44,6 @@ type GetPrivate = "private" :> ReqBody '[JSON] Text :> Header "Authorization" To
 
 userApi :: Proxy UserAPI
 userApi = Proxy
-
-userServer :: ServerT UserAPI App
-userServer = getUsers :<|> getUser :<|> createUser :<|> activateUserAccount :<|> loginUser :<|> getProtected :<|> getPrivate
 
 loginUser :: UserWithPassword -> App Token
 loginUser userWP@UserWithPassword {..} = do
