@@ -34,7 +34,7 @@ import Web.HttpApiData
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
     name Text
-    age Int Maybe
+    age Int
     email Text
     activated Bool Maybe
     UniqueEmail email
@@ -50,7 +50,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
 data UserWithPassword =
   UserWithPassword {
     name :: !Text
-  , age :: !(Maybe Int)
+  , age :: !Int
   , email :: !Text
   , password :: !Text
   } deriving (Eq, Show, Generic)

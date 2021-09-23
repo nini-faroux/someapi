@@ -60,13 +60,13 @@ instance ToParamSchema Token where
   toParamSchema _ = toParamSchema (Proxy :: Proxy Text)
 
 entityUserSample :: Entity User
-entityUserSample = Entity (toSqlKey 1) (User "nini" (Just 100) "nini@mail.com" (Just True))
+entityUserSample = Entity (toSqlKey 1) (User "nini" 100 "nini@mail.com" (Just True))
 
 userSample :: User
-userSample = User "nini" (Just 100) "nini@mail.com" (Just True)
+userSample = User "nini" 100 "nini@mail.com" (Just True)
 
 userWPSample :: UserWithPassword
-userWPSample = UserWithPassword "nini" (Just 100) "nini@mail.com" "pass"
+userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "pass"
 
 tokenSample :: Token
 tokenSample = Token token'

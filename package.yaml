@@ -55,6 +55,7 @@ dependencies:
 - utf8-string
 - microlens
 - email-validate
+- validation
 
 library:
   source-dirs: src

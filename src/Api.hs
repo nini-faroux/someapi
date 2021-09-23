@@ -25,6 +25,7 @@ import App
 import Model
 import Email
 import JWT
+import Validation
 
 type UserAPI =
        GetUsers
@@ -49,7 +50,7 @@ userApi = Proxy
 loginUser :: UserWithPassword -> App Token
 loginUser userWP@UserWithPassword {..} = do
   auth <- getAuth userWP
-  (Entity _ user) <- getUser $ User name Nothing email Nothing
+  (Entity _ user) <- getUser $ User name age email Nothing
   case auth of
     [Entity _ (Auth uid hashPass)] -> do
       let pass' = mkPassword password
@@ -85,25 +86,6 @@ createUser uwp@UserWithPassword {..} = do
     _ <- runDB . insert $ Auth {authUserId = newUserId, authPassword = pass}
     liftIO $ sendActivationLink user
     return $ fromSqlKey newUserId
-
-parseUser :: UserWithPassword -> App User
-parseUser user@UserWithPassword {..} = do
-  exists <- emailExists email
-  if exists then throwIO err400 { errBody = "Email already exists" }
-  else if not $ validEmail email then throwIO err400 { errBody = "Invalid email addresss" }
-  else if not $ validAge age then throwIO err400 { errBody = "Invalid user age" }
-  else return $ User name age email (Just False)
-  where
-    emailExists email = do
-      mUser <- runDB $ P.selectFirst [UserEmail P.==. email] []
-      case mUser of
-        Nothing -> return False
-        _ -> return True
-    validEmail email = EV.isValid $ encodeUtf8 email
-    validAge Nothing = True
-    validAge (Just age)
-      | age >= 0 && age <= 120 = True
-      | otherwise = False
 
 getProtected :: Text -> Maybe Token -> App Text
 getProtected = getProtectedResource Protected
