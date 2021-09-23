@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-
 module Server where
 
 import Servant

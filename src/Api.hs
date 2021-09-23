@@ -1,9 +1,4 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Api where
 

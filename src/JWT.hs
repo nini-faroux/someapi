@@ -1,7 +1,4 @@
-{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeOperators    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 

@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Validation where
 
 import RIO

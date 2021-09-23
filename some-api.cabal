@@ -38,6 +38,12 @@ library
       Paths_some_api
   hs-source-dirs:
       src
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      DataKinds
+      TypeOperators
+      TypeApplications
   build-depends:
       aeson
     , aeson-pretty

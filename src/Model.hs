@@ -1,17 +1,9 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE QuasiQuotes                #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RecordWildCards            #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 
 module Model where
