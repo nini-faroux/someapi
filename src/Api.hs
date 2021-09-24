@@ -44,19 +44,28 @@ userApi = Proxy
 
 loginUser :: UserLogin -> App Token
 loginUser userWP@UserLogin {..} = do
-  auth <- getAuth userWP
-  case auth of
-    [Entity _ (Auth uid hashPass)] -> do
-      let pass' = mkPassword loginPassword
-      case checkPassword pass' hashPass of
-        PasswordCheckFail -> throwIO err401 { errBody = "Wrong password" }
-        PasswordCheckSuccess -> do
-          now <- getCurrentTime
-          let token = makeAuthToken (Scope {protectedAccess = True, privateAccess = False}) now
-          case decodeUtf8' token of
-            Left _ -> return $ Token ""
-            Right token' -> return $ Token token'
-    _ -> throwIO err401 { errBody = "Authentication failed" }
+  exists <- emailExists loginEmail
+  if not exists then throwIO err400 { errBody = "Email doesn't exist" }
+  else do 
+    auth <- getAuth userWP
+    case auth of
+      [Entity _ (Auth uid hashPass)] -> do
+        let pass' = mkPassword loginPassword
+        case checkPassword pass' hashPass of
+          PasswordCheckFail -> throwIO err401 { errBody = "Wrong password" }
+          PasswordCheckSuccess -> do
+            now <- getCurrentTime
+            let token = makeAuthToken (Scope {protectedAccess = True, privateAccess = False}) now
+            case decodeUtf8' token of
+              Left _ -> return $ Token ""
+              Right token' -> return $ Token token'
+      _ -> throwIO err401 { errBody = "Authentication failed" }
+    where
+      emailExists email = do
+        mUser <- runDB $ P.selectFirst [UserEmail P.==. email] []
+        case mUser of
+          Nothing -> return False
+          _user -> return True
 
 getAuth :: UserLogin -> App [Entity Auth]
 getAuth UserLogin {..} =
