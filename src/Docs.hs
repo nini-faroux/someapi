@@ -15,6 +15,7 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson
 import Model
 import Api
+import UserTypes
 
 writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
@@ -32,6 +33,21 @@ instance ToSchema User where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
     & mapped.schema.description ?~ "User"
     & mapped.schema.example ?~ toJSON userSample
+
+instance ToSchema Email where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "Email"
+    & mapped.schema.example ?~ toJSON emailSample
+
+instance ToSchema Age where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "Age"
+    & mapped.schema.example ?~ toJSON ageSample
+
+instance ToSchema Name where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "Name"
+    & mapped.schema.example ?~ toJSON nameSample
 
 instance ToSchema UserWithPassword where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
@@ -61,10 +77,10 @@ instance ToParamSchema Token where
   toParamSchema _ = toParamSchema (Proxy :: Proxy Text)
 
 entityUserSample :: Entity User
-entityUserSample = Entity (toSqlKey 1) (User "nini" 100 "nini@mail.com" (Just True))
+entityUserSample = Entity (toSqlKey 1) userSample
 
 userSample :: User
-userSample = User "nini" 100 "nini@mail.com" (Just True)
+userSample = User nameSample ageSample emailSample (Just True)
 
 userWPSample :: UserWithPassword
 userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "password"

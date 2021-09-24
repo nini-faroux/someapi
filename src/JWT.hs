@@ -15,6 +15,7 @@ import Data.Either.Validation (validationToEither)
 import Control.Monad.Time
 import Model
 import Config
+import UserTypes
 
 makeUserToken :: User -> UTCTime -> ByteString
 makeUserToken User {..} = makeToken claims 7200
@@ -44,7 +45,7 @@ makeToken privateClaims' seconds = getToken . sign hmac512 <$> mkPayload
         }
 
 type UserJwt
-  = Jwt '["userName" ->> Text, "userAge" ->> Int, "userEmail" ->> Text, "userActivated" ->> Maybe Bool] 'NoNs
+  = Jwt '["userName" ->> Name, "userAge" ->> Age, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs
 
 type AuthJwt = Jwt '["protectedAccess" ->> Bool, "privateAccess" ->> Bool] 'NoNs
 

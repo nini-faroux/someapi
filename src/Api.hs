@@ -16,11 +16,13 @@ import Database.Esqueleto.Experimental
 import Data.Password.Bcrypt
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import qualified Text.Email.Validate as EV
+import Data.Validation
 import App
 import Model
 import Email
 import JWT
 import Validation
+import UserTypes
 
 type UserAPI =
        GetUsers
@@ -44,10 +46,11 @@ userApi = Proxy
 
 loginUser :: UserLogin -> App Token
 loginUser userWP@UserLogin {..} = do
-  exists <- emailExists loginEmail
+  email <- validEmail loginEmail
+  exists <- emailExists email
   if not exists then throwIO err400 { errBody = "Email doesn't exist" }
   else do 
-    auth <- getAuth userWP
+    auth <- getAuth email
     case auth of
       [Entity _ (Auth uid hashPass)] -> do
         let pass' = mkPassword loginPassword
@@ -61,14 +64,18 @@ loginUser userWP@UserLogin {..} = do
               Right token' -> return $ Token token'
       _ -> throwIO err401 { errBody = "Authentication failed" }
     where
+      validEmail email =
+        case makeEmail email of
+          Failure _err -> throwIO err400 { errBody = "Invalid email address" }
+          Success email' -> return email'
       emailExists email = do
         mUser <- runDB $ P.selectFirst [UserEmail P.==. email] []
         case mUser of
           Nothing -> return False
           _user -> return True
 
-getAuth :: UserLogin -> App [Entity Auth]
-getAuth UserLogin {..} =
+getAuth :: Email -> App [Entity Auth]
+getAuth email =
   runDB $
       select $ do
       (user :& auth) <-
@@ -76,7 +83,7 @@ getAuth UserLogin {..} =
           table @User `InnerJoin` table @Auth
           `on`
           (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
-      where_ (user ^. UserEmail ==. val loginEmail)
+      where_ (user ^. UserEmail ==. val email)
       where_ (user ^. UserActivated ==. val (Just True))
       pure auth
 

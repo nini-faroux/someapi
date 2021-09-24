@@ -7,6 +7,7 @@ import RIO
 import RIO.Time
 import qualified RIO.Text.Lazy as TL
 import qualified RIO.HashMap as HashMap
+import qualified Data.Text as T
 import Network.Mail.SMTP hiding (htmlPart)
 import Network.Mail.Mime (htmlPart, plainPart)
 import Text.Ginger
@@ -25,7 +26,7 @@ sendActivationLink user = do
   where
     host       = "smtp.gmail.com"
     from       = Address Nothing googleMail'
-    to         = [Address (Just $ user.userName) (user.userEmail)]
+    to         = [Address (Just (T.pack $ show user.userName)) (T.pack $ show user.userEmail)]
     cc         = []
     bcc        = []
     subject    = "SomeAPI Account Activation"

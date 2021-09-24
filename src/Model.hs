@@ -22,12 +22,13 @@ import App (App, Env(..))
 import Say
 import Libjwt.Classes
 import Web.HttpApiData
+import UserTypes
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
-    name Text
-    age Int
-    email Text
+    name Name
+    age Age
+    email Email
     activated Bool Maybe
     UniqueEmail email
     deriving Show Read Generic
@@ -58,9 +59,9 @@ instance FromJSON UserLogin
 instance ToJSON UserWithPassword
 instance ToJSON UserLogin
 
-instance Z.HasField "userName" User Text where
+instance Z.HasField "userName" User Name where
   hasField r = (\x -> r{userName=x}, userName r)
-instance Z.HasField "userEmail" User Text where
+instance Z.HasField "userEmail" User Email where
   hasField r = (\x -> r{userEmail=x}, userEmail r)
 
 data Scope = Scope { protectedAccess :: Bool, privateAccess :: Bool }

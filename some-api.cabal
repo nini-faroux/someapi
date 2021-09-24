@@ -33,6 +33,7 @@ library
       JWT
       Model
       Server
+      UserTypes
       Validation
   other-modules:
       Paths_some_api
