@@ -35,20 +35,19 @@ type GetUser = "user" :> ReqBody '[JSON] User :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
-type LoginUser = "login" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Token
+type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
 type GetProtected = "protected" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[PlainText] Text
 type GetPrivate = "private" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[PlainText] Text
 
 userApi :: Proxy UserAPI
 userApi = Proxy
 
-loginUser :: UserWithPassword -> App Token
-loginUser userWP@UserWithPassword {..} = do
+loginUser :: UserLogin -> App Token
+loginUser userWP@UserLogin {..} = do
   auth <- getAuth userWP
-  (Entity _ user) <- getUser $ User name age email Nothing
   case auth of
     [Entity _ (Auth uid hashPass)] -> do
-      let pass' = mkPassword password
+      let pass' = mkPassword loginPassword
       case checkPassword pass' hashPass of
         PasswordCheckFail -> throwIO err401 { errBody = "Wrong password" }
         PasswordCheckSuccess -> do
@@ -59,8 +58,8 @@ loginUser userWP@UserWithPassword {..} = do
             Right token' -> return $ Token token'
     _ -> throwIO err401 { errBody = "Authentication failed" }
 
-getAuth :: UserWithPassword -> App [Entity Auth]
-getAuth UserWithPassword {..} =
+getAuth :: UserLogin -> App [Entity Auth]
+getAuth UserLogin {..} =
   runDB $
       select $ do
       (user :& auth) <-
@@ -68,8 +67,7 @@ getAuth UserWithPassword {..} =
           table @User `InnerJoin` table @Auth
           `on`
           (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
-      where_ (user ^. UserEmail ==. val email)
-      where_ (user ^. UserName ==. val name)
+      where_ (user ^. UserEmail ==. val loginEmail)
       where_ (user ^. UserActivated ==. val (Just True))
       pure auth
 

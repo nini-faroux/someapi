@@ -47,8 +47,16 @@ data UserWithPassword =
   , password :: !Text
   } deriving (Eq, Show, Generic)
 
+data UserLogin =
+  UserLogin {
+    loginEmail :: !Text
+  , loginPassword :: !Text
+  } deriving (Eq, Show, Generic)
+
 instance FromJSON UserWithPassword
+instance FromJSON UserLogin
 instance ToJSON UserWithPassword
+instance ToJSON UserLogin
 
 instance Z.HasField "userName" User Text where
   hasField r = (\x -> r{userName=x}, userName r)

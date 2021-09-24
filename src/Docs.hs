@@ -38,6 +38,11 @@ instance ToSchema UserWithPassword where
     & mapped.schema.description ?~ "User with a password"
     & mapped.schema.example ?~ toJSON userWPSample
 
+instance ToSchema UserLogin where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "User login"
+    & mapped.schema.example ?~ toJSON userLoginSample
+
 instance ToSchema Token where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
     & mapped.schema.description ?~ "User token"
@@ -62,7 +67,10 @@ userSample :: User
 userSample = User "nini" 100 "nini@mail.com" (Just True)
 
 userWPSample :: UserWithPassword
-userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "pass"
+userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "password"
+
+userLoginSample :: UserLogin
+userLoginSample = UserLogin "nini@mail.com" "password"
 
 tokenSample :: Token
 tokenSample = Token token'
