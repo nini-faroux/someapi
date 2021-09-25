@@ -26,9 +26,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import qualified Database.Persist.TH as PTH
 import Libjwt.Classes ( JwtRep(..) )
 
-newtype Name = Name { unName :: Text } deriving (Read, Show, Generic)
+newtype Name = Name { unName :: Text } deriving (Read, Generic)
 newtype Age = Age { unAge :: Int } deriving (Read, Show, Generic)
-newtype Email = Email { unEmail :: Text } deriving (Read, Show, Generic)
+newtype Email = Email { unEmail :: Text } deriving (Read, Generic)
 
 instance FromJSON Name
 instance ToJSON Name
@@ -36,6 +36,11 @@ instance FromJSON Age
 instance ToJSON Age
 instance FromJSON Email
 instance ToJSON Email
+
+instance Show Name where
+  show (Name name) = show name
+instance Show Email where
+  show (Email email) = show email
 
 instance JwtRep Text Name where
   rep = unName
