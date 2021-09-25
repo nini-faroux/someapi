@@ -1,15 +1,15 @@
-module Validation where
+module Validation (parseUser) where
 
-import RIO
+import Servant (errBody, err400)
+import RIO (Text, throwIO)
 import qualified Data.Text as T
-import Servant
-import Data.Validation
+import Data.Validation (Validation(..))
 import qualified Database.Persist as P
 import qualified Text.Email.Validate as EV
 import qualified Data.ByteString.Lazy.UTF8 as LB
-import Model
-import App
-import UserTypes
+import Model (User(..), UserWithPassword(..), EntityField(UserEmail), runDB)
+import App (App)
+import UserTypes (VError(..), makeName, makeAge, makeEmail, validActivation, validPassword)
 
 validUser :: UserWithPassword -> Validation [VError] User
 validUser UserWithPassword {..} =

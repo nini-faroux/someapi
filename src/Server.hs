@@ -1,10 +1,10 @@
-module Server where
+module Server (hoistAppServer) where
 
 import Servant
-import Control.Monad.Except
+import Control.Monad.Except (ExceptT(..))
 import RIO hiding (Handler)
-import Api
-import App
+import Api (UserAPI, userApi, getUsers, getUser, createUser, loginUser, activateUserAccount, getProtected, getPrivate)
+import App (App, Env)
 
 userServer :: ServerT UserAPI App
 userServer =

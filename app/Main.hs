@@ -2,16 +2,13 @@
 
 module Main where
 
-import RIO
-import Servant
-import Api
-import Server
-import App
-import Model
-import Docs
+import Servant (serve)
+import Api (userApi)
+import Server (hoistAppServer)
+import App (Env(..))
+import Model (runMigrations, initialEnv)
+import Docs (writeSwaggerJSON)
 import Network.Wai.Handler.Warp (run)
-import Control.Monad.Logger
-import Database.Persist.Postgresql
 
 main :: IO ()
 main = do

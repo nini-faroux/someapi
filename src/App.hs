@@ -1,10 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module App where
+module App (App, Env(..)) where
 
-import RIO
+import RIO (RIO)
 import Database.Persist.Postgresql (ConnectionPool, createPostgresqlPool)
-import Network.Wai.Handler.Warp
+import Network.Wai.Handler.Warp (Port)
 
 type App = RIO Env
 

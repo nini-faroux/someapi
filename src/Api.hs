@@ -1,28 +1,40 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
-module Api where
+module Api 
+  ( UserAPI
+  , userApi
+  , createUser
+  , getUser
+  , getUsers
+  , loginUser
+  , activateUserAccount
+  , getProtected
+  , getPrivate
+  ) where
 
-import RIO hiding ((^.), on)
-import RIO.Time
+import Servant
+import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
+import RIO (Text, Int64, encodeUtf8, decodeUtf8', throwIO, liftIO)
+import RIO.Time (getCurrentTime)
 import RIO.List (headMaybe)
 import qualified Data.Text as T
-import Servant
-import Servant.Multipart
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental 
   (Entity(..), InnerJoin(..), 
   select, from, on, table, val, where_, insert, fromSqlKey, val,
   (==.), (=.), (^.), (:&)(..))
-import Data.Password.Bcrypt
+import Data.Password.Bcrypt (PasswordCheck(..), mkPassword, checkPassword)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import qualified Text.Email.Validate as EV
-import Data.Validation
-import App
+import Data.Validation (Validation(..))
+import App (App)
 import Model
-import Email
-import JWT
-import Validation
-import UserTypes
+   (User(..), UserWithPassword(..), UserLogin(..), Auth(..), EntityField(..),
+   Scope(..), ScopeField(..), Token(..), makePassword, runDB)
+import Email (sendActivationLink)
+import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
+import Validation (parseUser)
+import UserTypes (Email, makeEmail)
 
 type UserAPI =
        GetUsers

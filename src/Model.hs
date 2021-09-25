@@ -6,23 +6,37 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 
-module Model where
+module Model 
+  ( User(..)
+  , UserWithPassword(..)
+  , UserLogin(..)
+  , Auth(..)
+  , Scope(..)
+  , ScopeField(..)
+  , Token(..)
+  , EntityField(..)
+  , Key(..)
+  , runDB
+  , makePassword
+  , initialEnv
+  , runMigrations
+  ) 
+  where
 
-import RIO
+import RIO (Text, Generic, runReaderT, asks, liftIO)
 import qualified Database.Persist.TH as PTH
 import Database.Persist (Entity(..))
-import Database.Persist.Sql (Key(..), toSqlKey)
-import Database.Persist.Postgresql 
+import Database.Persist.Sql (Key(..), EntityField(..), toSqlKey)
+import Database.Persist.Postgresql
   (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
-import Data.Aeson
-import Data.Password.Bcrypt
-import Data.Password.Instances
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Password.Bcrypt (PasswordHash(..), Bcrypt, hashPassword, mkPassword)
+import Data.Password.Instances()
 import App (App, Env(..))
-import Say
-import Libjwt.Classes
-import Web.HttpApiData
-import UserTypes
+import Say (say)
+import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
+import UserTypes (Name, Email, Age)
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json

@@ -1,20 +1,20 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
-module Email where
+module Email (sendActivationLink) where
 
-import Servant.Auth.Server
-import RIO
-import RIO.Time
+import Text.Ginger (
+  Template, SourcePos, GVal, ToGVal, IncludeResolver, toGVal, makeContextHtml, runGinger, parseGinger)
+import Text.Ginger.Html (htmlSource)
+import RIO (Text, HashMap, Identity, Hashable, decodeUtf8', runIdentity)
+import RIO.Time (getCurrentTime)
 import qualified RIO.Text.Lazy as TL
 import qualified RIO.HashMap as HashMap
 import qualified Data.Text as T
 import Network.Mail.SMTP hiding (htmlPart)
 import Network.Mail.Mime (htmlPart, plainPart)
-import Text.Ginger
-import Text.Ginger.Html (htmlSource)
-import Model
-import Config
-import JWT
+import Model (User)
+import Config (googleMail, googleMail', googlePass)
+import JWT (makeUserToken)
 
 sendActivationLink :: User -> IO ()
 sendActivationLink user = do

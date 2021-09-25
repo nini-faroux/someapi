@@ -1,21 +1,39 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Docs where
+module Docs (writeSwaggerJSON) where
 
-import RIO
-import RIO.Text (pack)
-import Lens.Micro
-import Servant.Multipart
-import Database.Persist.Sql (Entity(..), toSqlKey)
-import qualified Data.ByteString.Lazy.Char8 as LB
+import Data.Swagger 
+  ( ToSchema(..)
+  , ToParamSchema(..)
+  , Swagger(..)
+  , NamedSchema(..)
+  , URL(..)
+  , example
+  , genericDeclareNamedSchema
+  , defaultSchemaOptions
+  , description
+  , declareNamedSchema
+  , toParamSchema
+  , schema
+  , info
+  , license
+  , version
+  , title
+  , url
+  )
 import Servant
 import Servant.Swagger
-import Data.Swagger
+import Servant.Multipart (MultipartForm, MultipartData, Mem)
+import RIO (Text)
+import RIO.Text (pack)
+import Lens.Micro (mapped, (&), (?~), (.~))
+import Database.Persist.Sql (Entity(..), toSqlKey)
+import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)
-import Data.Aeson
-import Model
-import Api
-import UserTypes
+import Data.Aeson (toJSON)
+import Model (User(..), UserWithPassword(..), UserLogin(..), Token(..), Key(..))
+import Api (userApi)
+import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
 
 writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)

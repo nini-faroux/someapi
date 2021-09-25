@@ -2,20 +2,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module JWT where
+module JWT 
+  ( makeAuthToken
+  , makeUserToken
+  , decodeAndValidateUser
+  , decodeAndValidateAuth
+  ) where
 
-import RIO hiding (catch)
-import RIO.Time
 import Web.Libjwt
+import RIO hiding (catch)
+import RIO.Time (UTCTime, NominalDiffTime)
 import qualified Web.Libjwt as LJ
 import Servant.Auth.Server (def)
 import Control.Arrow (left)
 import Control.Exception (catch, displayException)
 import Data.Either.Validation (validationToEither)
-import Control.Monad.Time
-import Model
-import Config
-import UserTypes
+import Control.Monad.Time (MonadTime)
+import Model (User(..), Scope(..))
+import Config (hmac512)
+import UserTypes (Name, Age, Email)
 
 makeUserToken :: User -> UTCTime -> ByteString
 makeUserToken User {..} = makeToken claims 7200

@@ -18,13 +18,13 @@ module UserTypes
   )
   where
 
-import RIO
-import Data.Validation
+import RIO ( Generic, encodeUtf8, Text )
+import Data.Validation ( Validation(..) )
 import qualified Data.Text as T
 import qualified Text.Email.Validate as EV
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Database.Persist.TH as PTH
-import Libjwt.Classes
+import Libjwt.Classes ( JwtRep(..) )
 
 newtype Name = Name { unName :: Text } deriving (Read, Show, Generic)
 newtype Age = Age { unAge :: Int } deriving (Read, Show, Generic)
