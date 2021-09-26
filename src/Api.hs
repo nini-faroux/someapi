@@ -122,8 +122,8 @@ getProtectedResource scopeField txt (Just (Token token)) = do
   case eScope of
     Left err -> throwIO err401 { errBody = LB.fromString err}
     Right Scope {..} -> case scopeField of
-      Protected -> if protectedAccess then return (greet "protected") else throwIO err403
-      Private -> if privateAccess then return (greet "private") else throwIO err403
+      Protected -> if protectedAccess then return (greet "protected") else throwIO err403 { errBody = "Not Authorised" }
+      Private -> if privateAccess then return (greet "private") else throwIO err403 { errBody = "Not Authorized" }
     where greet resourceName = "access granted to " <> resourceName <> " resource"
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
@@ -152,5 +152,5 @@ getUser :: P.Key User -> App (Entity User)
 getUser userId = do
   mUser <- runDB $ P.selectFirst [UserId P.==. userId] []
   case mUser of
-    Nothing -> throwIO err404
+    Nothing -> throwIO err404 { errBody = "User not found" }
     Just user -> return user
