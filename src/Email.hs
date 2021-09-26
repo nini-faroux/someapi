@@ -15,6 +15,7 @@ import Network.Mail.Mime (htmlPart, plainPart)
 import Model (User)
 import Config (googleMail, googleMail', googlePass)
 import JWT (makeUserToken)
+import UserTypes (renderEmail, renderName)
 
 sendActivationLink :: User -> IO ()
 sendActivationLink user = do
@@ -26,7 +27,7 @@ sendActivationLink user = do
   where
     host       = "smtp.gmail.com"
     from       = Address Nothing googleMail'
-    to         = [Address (Just (T.pack $ show user.userName)) (T.pack $ show user.userEmail)]
+    to         = [Address (Just (renderName user.userName)) (renderEmail user.userEmail)]
     cc         = []
     bcc        = []
     subject    = "SomeAPI Account Activation"

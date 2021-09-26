@@ -12,6 +12,8 @@ module UserTypes
   , makeEmail
   , validActivation
   , validPassword
+  , renderName
+  , renderEmail
   , nameSample
   , ageSample
   , emailSample
@@ -26,9 +28,18 @@ import Data.Aeson (FromJSON, ToJSON)
 import qualified Database.Persist.TH as PTH
 import Libjwt.Classes ( JwtRep(..) )
 
-newtype Name = Name { unName :: Text } deriving (Read, Generic)
-newtype Age = Age { unAge :: Int } deriving (Read, Show, Generic)
-newtype Email = Email { unEmail :: Text } deriving (Read, Generic)
+newtype Name = Name Text deriving (Show, Read, Generic)
+newtype Age = Age Int deriving (Show, Read, Generic)
+newtype Email = Email Text deriving (Show, Read, Generic)
+
+renderEmail :: Email -> Text
+renderEmail (Email email) = email
+
+renderName :: Name -> Text
+renderName (Name name) = name
+
+renderAge :: Age -> Int
+renderAge (Age age) = age
 
 instance FromJSON Name
 instance ToJSON Name
@@ -37,21 +48,16 @@ instance ToJSON Age
 instance FromJSON Email
 instance ToJSON Email
 
-instance Show Name where
-  show (Name name) = show name
-instance Show Email where
-  show (Email email) = show email
-
 instance JwtRep Text Name where
-  rep = unName
+  rep = renderName
   unRep = Just . Name
 
 instance JwtRep Int Age where
-  rep = unAge
+  rep = renderAge
   unRep = Just . Age
 
 instance JwtRep Text Email where
-  rep = unEmail
+  rep = renderEmail
   unRep = Just . Email
 
 PTH.derivePersistField "Name"
