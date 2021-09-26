@@ -45,7 +45,7 @@ type UserAPI =
   :<|> GetProtected
   :<|> GetPrivate
 
-type GetUser = "user" :> ReqBody '[JSON] User :> Get '[JSON] (Entity User)
+type GetUser = "user" :> Capture "userid" (P.Key User) :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
@@ -148,9 +148,9 @@ getFormInput formData = token
 getUsers :: App [Entity User]
 getUsers = runDB $ P.selectList [] []
 
-getUser :: User -> App (Entity User)
-getUser User {..} = do
-  mUser <- runDB $ P.selectFirst [UserName P.==. userName, UserEmail P.==. userEmail] []
+getUser :: P.Key User -> App (Entity User)
+getUser userId = do
+  mUser <- runDB $ P.selectFirst [UserId P.==. userId] []
   case mUser of
     Nothing -> throwIO err404
     Just user -> return user

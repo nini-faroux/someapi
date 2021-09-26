@@ -94,6 +94,9 @@ instance ToSchema (Key User) where
 instance ToParamSchema Token where
   toParamSchema _ = toParamSchema (Proxy :: Proxy Text)
 
+instance ToParamSchema (Key User) where
+  toParamSchema _ = toParamSchema (Proxy :: Proxy Text)
+
 entityUserSample :: Entity User
 entityUserSample = Entity (toSqlKey 1) userSample
 
