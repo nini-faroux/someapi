@@ -49,8 +49,8 @@ type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
-type GetProtected = "protected" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[PlainText] Text
-type GetPrivate = "private" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[PlainText] Text
+type GetProtected = "protected" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[JSON] Text
+type GetPrivate = "private" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[JSON] Text
 
 userApi :: Proxy UserAPI
 userApi = Proxy
