@@ -45,6 +45,7 @@ library
       DataKinds
       TypeOperators
       TypeApplications
+  ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -Wredundant-constraints -Wmissing-export-lists -Werror
   build-depends:
       aeson
     , aeson-pretty
@@ -90,7 +91,7 @@ executable some-api-exe
       Paths_some_api
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -Wredundant-constraints -Wmissing-export-lists -Werror -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , aeson-pretty
