@@ -25,10 +25,9 @@ module Model
 
 import RIO (Text, Generic, runReaderT, asks, liftIO)
 import qualified Database.Persist.TH as PTH
-import Database.Persist (Entity(..))
-import Database.Persist.Sql (Key(..), EntityField(..), toSqlKey)
+import Database.Persist.Sql (Key, EntityField)
 import Database.Persist.Postgresql
-  (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
+  (ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt, hashPassword, mkPassword)
@@ -102,11 +101,8 @@ runMigrations = do
   runAction connectionString $ runMigration migrateAll
   say "Migrations Finished"
 
-migrateDB :: IO ()
-migrateDB = runAction connectionString (runMigration migrateAll)
-
 runAction :: ConnectionString -> SqlPersistT (LoggingT IO) a ->  IO a
-runAction connectionString action = runStdoutLoggingT $ withPostgresqlConn connectionString $ \backend ->
+runAction connString action = runStdoutLoggingT $ withPostgresqlConn connString $ \backend ->
   runReaderT action backend
 
 initialEnv :: IO Env

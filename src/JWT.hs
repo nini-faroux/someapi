@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module JWT 
   ( makeAuthToken
@@ -15,7 +16,7 @@ import RIO.Time (UTCTime, NominalDiffTime)
 import qualified Web.Libjwt as LJ
 import Servant.Auth.Server (def)
 import Control.Arrow (left)
-import Control.Exception (catch, displayException)
+import Control.Exception (catch)
 import Data.Either.Validation (validationToEither)
 import Control.Monad.Time (MonadTime)
 import Model (User(..), Scope(..))
