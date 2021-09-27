@@ -2,10 +2,8 @@ module Validation (parseUser) where
 
 import Servant (errBody, err400)
 import RIO (Text, throwIO)
-import qualified Data.Text as T
 import Data.Validation (Validation(..))
 import qualified Database.Persist as P
-import qualified Text.Email.Validate as EV
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Model (User(..), UserWithPassword(..), EntityField(UserEmail), runDB)
 import App (App)
@@ -22,18 +20,18 @@ validUser UserWithPassword {..} =
 parseUser :: UserWithPassword -> App User
 parseUser uwp@UserWithPassword {..} = do
   exists <- emailExists email
-  let emailExists = otherError exists
+  let emailExistsError = otherError exists
   let passwordError = otherError $ validPassword password
   case validUser uwp of
-    Success user -> if null emailExists && null passwordError then return user
-                    else throwIO err400 { errBody = errorsToBS [emailExists, passwordError] }
-    Failure userErrors -> throwIO err400 { errBody = errorsToBS [userErrors, emailExists, passwordError] }
+    Success user -> if null emailExistsError && null passwordError then return user
+                    else throwIO err400 { errBody = errorsToBS [emailExistsError, passwordError] }
+    Failure userErrors -> throwIO err400 { errBody = errorsToBS [userErrors, emailExistsError, passwordError] }
   where 
     errorsToBS :: [[VError]] -> LB.ByteString
     errorsToBS ess = LB.fromString $ show $ concat ess
     emailExists :: Text -> App (Validation [VError] Bool)
-    emailExists email =
-      case makeEmail email of
+    emailExists emailAddr =
+      case makeEmail emailAddr of
         Failure _err -> return $ Success False
         Success email' -> do
           mUser <- runDB $ P.selectFirst [UserEmail P.==. email'] []
