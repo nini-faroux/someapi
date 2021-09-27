@@ -9,7 +9,6 @@ import RIO (Text, HashMap, Identity, Hashable, decodeUtf8', runIdentity)
 import RIO.Time (getCurrentTime)
 import qualified RIO.Text.Lazy as TL
 import qualified RIO.HashMap as HashMap
-import qualified Data.Text as T
 import Network.Mail.SMTP hiding (htmlPart)
 import Network.Mail.Mime (htmlPart, plainPart)
 import Model (User)
@@ -21,7 +20,7 @@ sendActivationLink :: User -> IO ()
 sendActivationLink user = do
   now <- getCurrentTime
   let token = makeUserToken user now
-  let urlHtml = htmlPart $ TL.fromStrict $ urlText user token
+  let urlHtml = htmlPart $ TL.fromStrict $ urlText token
       mail = simpleMail from to cc bcc subject [body, urlHtml]
   sendMailWithLoginTLS host googleMail googlePass mail
   where
@@ -32,19 +31,19 @@ sendActivationLink user = do
     bcc        = []
     subject    = "SomeAPI Account Activation"
     body       = plainPart ""
-    urlText user token =
+    urlText token =
       case decodeUtf8' token of
-        Left err -> error "Utf8 decoding error"
-        Right token' -> renderTokenTemplate (tokenTemplate token') (context token')
+        Left _err -> error "Utf8 decoding error"
+        Right token' -> renderTokenTemplate tokenTemplate $ context token'
 
 renderTokenTemplate :: Template SourcePos -> HashMap Text Text -> Text
 renderTokenTemplate template contextMap =
   let contextLookup = flip scopeLookup contextMap
-      context = makeContextHtml contextLookup
-   in htmlSource $ runGinger context template
+      context' = makeContextHtml contextLookup
+   in htmlSource $ runGinger context' template
 
-tokenTemplate :: Text -> Template SourcePos
-tokenTemplate token =
+tokenTemplate :: Template SourcePos
+tokenTemplate =
   either (error . show) id . runIdentity $ parseGinger nullResolver Nothing form
     where
       form = "<form method=post action=http://localhost:8000/activate>" ++
@@ -56,7 +55,7 @@ context :: Text -> HashMap Text Text
 context token = HashMap.fromList [("token", token)]
 
 scopeLookup :: (Hashable k, Eq k, ToGVal m b) => k -> HashMap.HashMap k b -> GVal m
-scopeLookup key context = toGVal $ HashMap.lookup key context
+scopeLookup key context' = toGVal $ HashMap.lookup key context'
 
 nullResolver :: IncludeResolver Identity
 nullResolver = const $ return Nothing
