@@ -19,13 +19,12 @@ import RIO.Time (getCurrentTime)
 import RIO.List (headMaybe)
 import qualified Data.Text as T
 import qualified Database.Persist as P
-import Database.Esqueleto.Experimental 
-  (Entity(..), InnerJoin(..), 
+import Database.Esqueleto.Experimental
+ (Entity(..), InnerJoin(..), 
   select, from, on, table, val, where_, insert, fromSqlKey, val,
-  (==.), (=.), (^.), (:&)(..))
+  (==.), (^.), (:&)(..))
 import Data.Password.Bcrypt (PasswordCheck(..), mkPassword, checkPassword)
 import qualified Data.ByteString.Lazy.UTF8 as LB
-import qualified Text.Email.Validate as EV
 import Data.Validation (Validation(..))
 import App (App)
 import Model
@@ -57,14 +56,14 @@ userApi :: Proxy UserAPI
 userApi = Proxy
 
 loginUser :: UserLogin -> App Token
-loginUser userWP@UserLogin {..} = do
+loginUser UserLogin {..} = do
   email <- validEmail loginEmail
   exists <- emailExists email
   if not exists then throwIO err400 { errBody = "Email doesn't exist" }
   else do 
     auth <- getAuth email
     case auth of
-      [Entity _ (Auth uid hashPass)] -> do
+      [Entity _ (Auth _uid hashPass)] -> do
         let pass' = mkPassword loginPassword
         case checkPassword pass' hashPass of
           PasswordCheckFail -> throwIO err401 { errBody = "Wrong password" }
@@ -117,7 +116,7 @@ getPrivate = getProtectedResource Private
 -- | Trim token before decoding to remove 'Bearer' prefix, otherwise invalid token error
 getProtectedResource :: ScopeField -> Text -> Maybe Token -> App Text
 getProtectedResource _ _ Nothing = throwIO err401 { errBody = "no token found" }
-getProtectedResource scopeField txt (Just (Token token)) = do
+getProtectedResource scopeField _txt (Just (Token token)) = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
   case eScope of
     Left err -> throwIO err401 { errBody = LB.fromString err}
@@ -131,7 +130,7 @@ activateUserAccount formData = do
   let token = getFormInput formData
   eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
   case eUser of
-    Left err -> throwIO err404
+    Left err -> throwIO err400 { errBody = LB.fromString err }
     Right user -> do
       _ <- runDB $ P.updateWhere [UserEmail P.==. user.userEmail,
                                   UserName P.==. user.userName,
