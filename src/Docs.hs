@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Docs (writeSwaggerJSON) where
 
@@ -24,10 +25,9 @@ import Data.Swagger
 import Servant
 import Servant.Swagger
 import Servant.Multipart (MultipartForm, MultipartData, Mem)
-import RIO (Text)
-import RIO.Text (pack)
+import RIO.Text (Text)
 import Lens.Micro (mapped, (&), (?~), (.~))
-import Database.Persist.Sql (Entity(..), toSqlKey)
+import Database.Persist.Sql (Entity(..))
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson (toJSON)
@@ -37,8 +37,6 @@ import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
 
 writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
-
-type SwaggerAPI = "api.json" :> Get '[JSON] Swagger
 
 userSwagger :: Swagger
 userSwagger = toSwagger userApi
@@ -86,7 +84,7 @@ instance HasSwagger  (MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (May
   toSwagger _ = mempty
 
 instance ToSchema (Entity User) where
-  declareNamedSchema proxy = pure $ NamedSchema Nothing mempty
+  declareNamedSchema _ = pure $ NamedSchema Nothing mempty
 
 instance ToSchema (Key User) where
   declareNamedSchema _ = pure $ NamedSchema Nothing mempty
@@ -97,8 +95,8 @@ instance ToParamSchema Token where
 instance ToParamSchema (Key User) where
   toParamSchema _ = toParamSchema (Proxy :: Proxy Text)
 
-entityUserSample :: Entity User
-entityUserSample = Entity (toSqlKey 1) userSample
+-- entityUserSample :: Entity User
+-- entityUserSample = Entity (toSqlKey 1) userSample
 
 userSample :: User
 userSample = User nameSample ageSample emailSample (Just True)
