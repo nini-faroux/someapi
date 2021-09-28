@@ -1,9 +1,9 @@
-module Server (hoistAppServer) where
+module Server (hoistAppServer, userServer) where
 
 import Servant
 import Control.Monad.Except (ExceptT(..))
 import RIO hiding (Handler)
-import Api (UserAPI, userApi, getUsers, getUser, createUser, loginUser, activateUserAccount, getProtected, getPrivate)
+import Api (UserAPI, userApi, getUsers, getUser, createUser, loginUser, activateUserAccount, getProtected, getAdmin)
 import App (App, Env)
 
 userServer :: ServerT UserAPI App
@@ -14,7 +14,7 @@ userServer =
   :<|> activateUserAccount
   :<|> loginUser
   :<|> getProtected
-  :<|> getPrivate
+  :<|> getAdmin
 
 hoistAppServer :: Env -> Server UserAPI
 hoistAppServer env' = hoistServer userApi (transform env') userServer where

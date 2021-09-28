@@ -9,7 +9,7 @@ module Api
   , loginUser
   , activateUserAccount
   , getProtected
-  , getPrivate
+  , getAdmin
   ) where
 
 import Servant
@@ -42,7 +42,7 @@ type UserAPI =
   :<|> ActivateUser
   :<|> LoginUser
   :<|> GetProtected
-  :<|> GetPrivate
+  :<|> GetAdmin
 
 type GetUser = "user" :> Capture "userid" (P.Key User) :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
@@ -50,7 +50,7 @@ type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
 type GetProtected = "protected" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[JSON] Text
-type GetPrivate = "private" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[JSON] Text
+type GetAdmin = "admin" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[JSON] Text
 
 userApi :: Proxy UserAPI
 userApi = Proxy
@@ -69,7 +69,7 @@ loginUser UserLogin {..} = do
           PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
           PasswordCheckSuccess -> do
             now <- getCurrentTime
-            let token = makeAuthToken (Scope {protectedAccess = True, privateAccess = False}) now
+            let token = makeAuthToken (Scope {protectedAccess = True, adminAccess = False}) now
             case decodeUtf8' token of
               Left _ -> return $ Token ""
               Right token' -> return $ Token token'
@@ -111,19 +111,19 @@ createUser uwp@UserWithPassword {..} = do
 getProtected :: Text -> Maybe Token -> App Text
 getProtected = getProtectedResource Protected
 
-getPrivate :: Text -> Maybe Token -> App Text
-getPrivate = getProtectedResource Private
+getAdmin :: Text -> Maybe Token -> App Text
+getAdmin = getProtectedResource Admin
 
 -- | Trim token before decoding to remove 'Bearer' prefix, otherwise invalid token error
 getProtectedResource :: ScopeField -> Text -> Maybe Token -> App Text
-getProtectedResource _ _ Nothing = throwIO err401 { errBody = "no token found" }
+getProtectedResource _ _ Nothing = throwIO err401 { errBody = "No token found" }
 getProtectedResource scopeField _txt (Just (Token token)) = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
   case eScope of
     Left err -> throwIO err400 { errBody = LB.fromString err}
     Right Scope {..} -> case scopeField of
       Protected -> if protectedAccess then return (greet "protected") else throwIO err403 { errBody = "Not Authorised" }
-      Private -> if privateAccess then return (greet "private") else throwIO err403 { errBody = "Not Authorized" }
+      Admin -> if adminAccess then return (greet "admin") else throwIO err403 { errBody = "Not Authorized" }
     where greet resourceName = "access granted to " <> resourceName <> " resource"
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))

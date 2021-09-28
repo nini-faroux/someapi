@@ -34,7 +34,7 @@ makeUserToken User {..} = makeToken claims 7200
 
 makeAuthToken :: Scope -> UTCTime -> ByteString
 makeAuthToken Scope {..} = makeToken claims 900
-  where claims = (#protectedAccess ->> protectedAccess, #privateAccess ->> privateAccess)
+  where claims = (#protectedAccess ->> protectedAccess, #adminAccess ->> adminAccess)
 
 makeToken :: (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>
   a -> NominalDiffTime -> UTCTime -> ByteString
@@ -53,7 +53,7 @@ makeToken privateClaims' seconds = getToken . sign hmac512 <$> mkPayload
 type UserJwt
   = Jwt '["userName" ->> Name, "userAge" ->> Age, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs
 
-type AuthJwt = Jwt '["protectedAccess" ->> Bool, "privateAccess" ->> Bool] 'NoNs
+type AuthJwt = Jwt '["protectedAccess" ->> Bool, "adminAccess" ->> Bool] 'NoNs
 
 instance ToPrivateClaims User
 instance FromPrivateClaims User
