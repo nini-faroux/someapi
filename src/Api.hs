@@ -120,7 +120,7 @@ getProtectedResource _ _ Nothing = throwIO err401 { errBody = "no token found" }
 getProtectedResource scopeField _txt (Just (Token token)) = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
   case eScope of
-    Left err -> throwIO err401 { errBody = LB.fromString err}
+    Left err -> throwIO err400 { errBody = LB.fromString err}
     Right Scope {..} -> case scopeField of
       Protected -> if protectedAccess then return (greet "protected") else throwIO err403 { errBody = "Not Authorised" }
       Private -> if privateAccess then return (greet "private") else throwIO err403 { errBody = "Not Authorized" }
