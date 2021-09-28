@@ -59,21 +59,21 @@ loginUser :: UserLogin -> App Token
 loginUser UserLogin {..} = do
   email <- validEmail loginEmail
   exists <- emailExists email
-  if not exists then throwIO err400 { errBody = "Email doesn't exist" }
+  if not exists then throwIO err401 { errBody = authErrorMessage }
   else do 
     auth <- getAuth email
     case auth of
       [Entity _ (Auth _uid hashPass)] -> do
         let pass' = mkPassword loginPassword
         case checkPassword pass' hashPass of
-          PasswordCheckFail -> throwIO err401 { errBody = "Wrong password" }
+          PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
           PasswordCheckSuccess -> do
             now <- getCurrentTime
             let token = makeAuthToken (Scope {protectedAccess = True, privateAccess = False}) now
             case decodeUtf8' token of
               Left _ -> return $ Token ""
               Right token' -> return $ Token token'
-      _ -> throwIO err401 { errBody = "Authentication failed" }
+      _ -> throwIO err401 { errBody = authErrorMessage }
     where
       validEmail email =
         case makeEmail email of
@@ -84,6 +84,7 @@ loginUser UserLogin {..} = do
         case mUser of
           Nothing -> return False
           _user -> return True
+      authErrorMessage = "Incorrect username or password, or account not yet activated"
 
 getAuth :: Email -> App [Entity Auth]
 getAuth email =
