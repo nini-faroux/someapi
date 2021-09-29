@@ -28,9 +28,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import qualified Database.Persist.TH as PTH
 import Libjwt.Classes ( JwtRep(..) )
 
-newtype Name = Name Text deriving (Show, Read, Generic)
-newtype Age = Age Int deriving (Show, Read, Generic)
-newtype Email = Email Text deriving (Show, Read, Generic)
+newtype Name = Name Text deriving (Eq, Show, Read, Generic)
+newtype Age = Age Int deriving (Eq, Show, Read, Generic)
+newtype Email = Email Text deriving (Eq, Show, Read, Generic)
 
 renderEmail :: Email -> Text
 renderEmail (Email email) = email
@@ -109,4 +109,4 @@ ageSample :: Age
 ageSample = Age 100
 
 emailSample :: Email
-emailSample = Email "nini@gmail.com"
+emailSample = Email "nini@mail.com"

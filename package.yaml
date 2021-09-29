@@ -25,10 +25,12 @@ dependencies:
 - servant-server
 - servant-multipart
 - servant-swagger
+- servant-client
 - swagger2
 - aeson-pretty
 - http-types
 - http-api-data
+- http-client
 - rio
 - persistent
 - persistent-postgresql
@@ -56,6 +58,9 @@ dependencies:
 - microlens
 - email-validate
 - validation
+- hspec
+- hspec-wai
+- hspec-wai-json
 
 library:
   source-dirs: src

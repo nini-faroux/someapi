@@ -2,6 +2,8 @@
 
 module Api 
   ( UserAPI
+  , CreateUser
+  , GetUser
   , userApi
   , createUser
   , getUser

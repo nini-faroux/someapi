@@ -44,7 +44,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     email Email
     activated Bool Maybe
     UniqueEmail email
-    deriving Show Read Generic
+    deriving Eq Show Read Generic
 
   Auth
     userId (Key User)
