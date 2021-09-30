@@ -4,6 +4,7 @@ module Api
   ( UserAPI
   , CreateUser
   , GetUser
+  , GetUsers
   , userApi
   , createUser
   , getUser

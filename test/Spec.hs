@@ -27,9 +27,15 @@ apiTests =
   around withUserApp $ do
     let createUser = client (Proxy :: Proxy CreateUser)
     let getUser = client (Proxy :: Proxy GetUser)
+    let getUsers = client (Proxy :: Proxy GetUsers)
     baseUrl <- runIO $ parseBaseUrl "http://localhost"
     manager <- runIO $ newManager defaultManagerSettings
     let clientEnv = mkClientEnv manager (baseUrl { baseUrlPort = 8000 })
+
+    describe "GET /users" $
+      it "should return empty list of users" $ \_port -> do
+        result <- runClientM getUsers clientEnv
+        result `shouldBe` Right []
 
     describe "POST /user" $
       it "should not create invalid user, and should report all validation errors" $ \_port -> do
@@ -57,6 +63,11 @@ apiTests =
             liftIO $ print $ responseBody response
             responseBody response `shouldBe` "[ExistingEmail]"
           Right res -> liftIO $ print res
+
+    describe "GET /users" $
+      it "should return list of users" $ \_port -> do
+        result <- runClientM getUsers clientEnv
+        result `shouldBe` Right [createdEntityUserFromSample1]
 
     describe "GET /user/1" $
       it "should get valid user" $ \_port -> do
