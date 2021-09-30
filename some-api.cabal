@@ -32,9 +32,11 @@ library
       Email
       JWT
       Model
+      NoteValidation
       Query
       Server
       UserTypes
+      UserValidation
       Validation
   other-modules:
       Paths_some_api

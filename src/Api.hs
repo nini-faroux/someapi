@@ -11,8 +11,8 @@ module Api
   , getUsers
   , loginUser
   , activateUserAccount
-  , getProtected
-  , getAdmin
+  , getNotes
+  , postNote
   ) where
 
 import Servant
@@ -33,8 +33,9 @@ import Model
    Scope(..), ScopeField(..), Token(..), makePassword)
 import Email (sendActivationLink)
 import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
-import Validation (parseUser)
-import UserTypes (makeEmail)
+import UserValidation (parseUser)
+import NoteValidation (parseNote)
+import UserTypes (Email, makeEmail)
 import qualified Query
 
 type UserAPI =
@@ -43,16 +44,16 @@ type UserAPI =
   :<|> CreateUser
   :<|> ActivateUser
   :<|> LoginUser
-  :<|> GetProtected
-  :<|> GetAdmin
+  :<|> GetNotes
+  :<|> PostNote
 
 type GetUser = "user" :> Capture "userid" (P.Key User) :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
-type GetProtected = "protected" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[JSON] Text
-type GetAdmin = "admin" :> ReqBody '[JSON] Text :> Header "Authorization" Token :> Post '[JSON] Text
+type GetNotes = "notes" :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
+type PostNote = "note" :> ReqBody '[JSON] NoteInput :> Header "Authorization" Token :> Post '[JSON] (P.Key Note)
 
 userApi :: Proxy UserAPI
 userApi = Proxy
@@ -114,16 +115,21 @@ getAdmin :: Text -> Maybe Token -> App Text
 getAdmin = getProtectedResource Admin
 
 -- | Trim token before decoding to remove 'Bearer' prefix, otherwise invalid token error
-getProtectedResource :: ScopeField -> Text -> Maybe Token -> App Text
-getProtectedResource _ _ Nothing = throwIO err401 { errBody = "No token found" }
-getProtectedResource scopeField _txt (Just (Token token)) = do
+getNotes :: Maybe Token -> App [Entity Note]
+getNotes Nothing = throwIO err401 { errBody = "No token found" }
+getNotes (Just (Token token)) = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
   case eScope of
     Left err -> throwIO err400 { errBody = LB.fromString err}
-    Right Scope {..} -> case scopeField of
-      Protected -> if protectedAccess then return (greet "protected") else throwIO err403 { errBody = "Not Authorised" }
-      Admin -> if adminAccess then return (greet "admin") else throwIO err403 { errBody = "Not Authorized" }
-    where greet resourceName = "access granted to " <> resourceName <> " resource"
+    Right Scope {..} -> if protectedAccess then getNotes' else throwIO err403 { errBody = "Not Authorised" }
+
+postNote :: NoteInput -> Maybe Token -> App (P.Key Note)
+postNote _ Nothing = throwIO err401 { errBody = "No token found" }
+postNote note (Just (Token token)) = do
+  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
+  case eScope of
+    Left err -> throwIO err400 { errBody = LB.fromString err }
+    Right Scope {..} -> if protectedAccess then postNote' note else throwIO err403 { errBody = "Not Authorised" }
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
@@ -140,3 +146,13 @@ getFormInput formData = token
   where
     nameValuePairs = inputs formData
     token = maybe "" iValue $ headMaybe nameValuePairs
+
+getNotes' :: App [Entity Note]
+getNotes' = runDB $ P.selectList [] []
+
+postNote' :: NoteInput -> App (P.Key Note)
+postNote' noteInput = do
+  time' <- liftIO getCurrentTime
+  case validNote noteInput time' of
+    Left _err -> throwIO err400 { errBody = "Invalid note" }
+    Right note -> runDB $ P.insert note

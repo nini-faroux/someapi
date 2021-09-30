@@ -6,7 +6,6 @@ module UserTypes
   ( Age
   , Name
   , Email
-  , VError(..)
   , makeName
   , makeAge
   , makeEmail
@@ -27,6 +26,7 @@ import qualified Text.Email.Validate as EV
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Database.Persist.TH as PTH
 import Libjwt.Classes ( JwtRep(..) )
+import Validation (VError(..))
 
 newtype Name = Name Text deriving (Eq, Show, Read, Generic)
 newtype Age = Age Int deriving (Eq, Show, Read, Generic)
@@ -63,15 +63,6 @@ instance JwtRep Text Email where
 PTH.derivePersistField "Name"
 PTH.derivePersistField "Age"
 PTH.derivePersistField "Email"
-
-data VError =
-    ExistingEmail
-  | InvalidEmail
-  | InvalidAge
-  | InvalidName
-  | InvalidPassword
-  | InvalidActivation
-  deriving Show
 
 makeAge :: Int -> Validation [VError] Age
 makeAge age

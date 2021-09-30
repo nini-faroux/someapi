@@ -26,12 +26,14 @@ import Servant
 import Servant.Swagger
 import Servant.Multipart (MultipartForm, MultipartData, Mem)
 import RIO.Text (Text)
+import RIO.Time (UTCTime(UTCTime), TimeOfDay(TimeOfDay), fromGregorian, timeOfDayToTime)
+import Data.Fixed (Pico)
 import Lens.Micro (mapped, (&), (?~), (.~))
-import Database.Persist.Sql (Entity(..))
+import Database.Persist.Sql (Entity(..), toSqlKey)
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson (toJSON)
-import Model (User(..), UserWithPassword(..), UserLogin(..), Token(..), Key(..))
+import Model (User(..), UserWithPassword(..), UserLogin(..), Token(..), Key(..), Note(..))
 import Api (userApi)
 import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
 
@@ -49,6 +51,11 @@ instance ToSchema User where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
     & mapped.schema.description ?~ "User"
     & mapped.schema.example ?~ toJSON userSample
+
+instance ToSchema Note where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "Note"
+    & mapped.schema.example ?~ toJSON noteSample
 
 instance ToSchema Email where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
@@ -86,7 +93,13 @@ instance HasSwagger  (MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (May
 instance ToSchema (Entity User) where
   declareNamedSchema _ = pure $ NamedSchema Nothing mempty
 
+instance ToSchema (Entity Note) where
+  declareNamedSchema _ = pure $ NamedSchema Nothing mempty
+
 instance ToSchema (Key User) where
+  declareNamedSchema _ = pure $ NamedSchema Nothing mempty
+
+instance ToSchema (Key Note) where
   declareNamedSchema _ = pure $ NamedSchema Nothing mempty
 
 instance ToParamSchema Token where
@@ -95,11 +108,18 @@ instance ToParamSchema Token where
 instance ToParamSchema (Key User) where
   toParamSchema _ = toParamSchema (Proxy :: Proxy Text)
 
--- entityUserSample :: Entity User
--- entityUserSample = Entity (toSqlKey 1) userSample
+makeUTCTime :: (Integer, Int, Int)
+          -> (Int, Int, Pico)
+          -> UTCTime
+makeUTCTime (year, mon, day) (hour, minute, sec) =
+  UTCTime (fromGregorian year mon day)
+          (timeOfDayToTime (TimeOfDay hour minute sec))
 
 userSample :: User
 userSample = User nameSample ageSample emailSample (Just True)
+
+noteSample :: Note
+noteSample = Note (toSqlKey 1) nameSample "do something good" (makeUTCTime (2021, 9, 30) (20, 42, 0))
 
 userWPSample :: UserWithPassword
 userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "password"
