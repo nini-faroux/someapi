@@ -29,8 +29,8 @@ import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation(..))
 import App (App)
 import Model
-   (User(..), UserWithPassword(..), UserLogin(..), Auth(..), EntityField(..),
-   Scope(..), ScopeField(..), Token(..), makePassword, runDB)
+   (User(..), UserWithPassword(..), UserLogin(..), Auth(..),
+   Scope(..), ScopeField(..), Token(..), makePassword)
 import Email (sendActivationLink)
 import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import Validation (parseUser)
@@ -82,7 +82,7 @@ loginUser UserLogin {..} = do
           Failure _err -> throwIO err400 { errBody = "Invalid email address" }
           Success email' -> return email'
       emailExists email = do
-        mUser <- runDB $ P.selectFirst [UserEmail P.==. email] []
+        mUser <- Query.getUserByEmail email
         case mUser of
           Nothing -> return False
           _user -> return True
