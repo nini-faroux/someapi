@@ -84,6 +84,8 @@ executables:
   some-api-exe:
     main:                Main.hs
     source-dirs:         app
+    default-extensions:
+    - RecordWildCards
     ghc-options:
     - -Wall
     - -Wcompat
