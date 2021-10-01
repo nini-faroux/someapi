@@ -1,21 +1,37 @@
 module NoteValidation (parseNote) where
 
--- import RIO (Text)
-import RIO.Time (UTCTime)
--- import qualified Data.Text as T
--- import Data.Validation (Validation)
-import Model (NoteInput(..), Note(..))
--- import UserTypes (makeName)
--- import Validation (VError(..))
+import RIO (Text, throwIO, liftIO)
+import RIO.Time (UTCTime, getCurrentTime)
+import Servant (errBody, err400)
+import qualified Data.Text as T
+import qualified Data.ByteString.Lazy.UTF8 as LB
+import Data.Validation (Validation(..))
+import Model (NoteInput(..), Note(..), User(..), Key)
+import UserTypes (makeName)
+import Validation (VError(..))
 import App (App)
 
-parseNote :: NoteInput -> UTCTime -> App Note
-parseNote _noteInput = undefined
+parseNote :: NoteInput -> App Note
+parseNote noteInput = do
+  time' <- liftIO getCurrentTime
+  case validNote noteInput time' of
+    Success note -> return note
+    Failure errs -> throwIO err400 { errBody = errorsToBS errs }
+  where
+    errorsToBS :: [VError] -> LB.ByteString
+    errorsToBS ess = LB.fromString $ show ess
 
--- validateNote :: NoteInput -> UTCTime -> Validation [VError] Note
--- validateNote NoteInput {..} time =
---   Note <$> validId userId <*> makeName noteName <*> validBody noteBody <*> validTime time
+validNote :: NoteInput -> UTCTime -> Validation [VError] Note
+validNote NoteInput {..} time =
+  Note <$> validId userId <*> makeName noteName <*> validBody noteBody <*> validTime time
 
--- validId = undefined
--- validBody = undefined
--- validTime = undefined
+validId :: Key User -> Validation [VError] (Key User)
+validId = Success
+
+validBody :: Text -> Validation [VError] T.Text
+validBody body
+  | T.length body < 5 || T.length body > 300 = Failure [InvalidNoteBody]
+  | otherwise = Success body
+
+validTime :: UTCTime -> Validation [VError] UTCTime
+validTime = Success

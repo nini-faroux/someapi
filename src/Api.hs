@@ -126,8 +126,7 @@ createNote note (Just (Token token)) = do
     Right Scope {..} -> if protectedAccess then insertNote note else throwIO err403 { errBody = "Not Authorised" }
     where
       insertNote noteInput = do
-        time' <- liftIO getCurrentTime
-        validNote <- parseNote noteInput time'
+        validNote <- parseNote noteInput
         Query.insertNote validNote
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
