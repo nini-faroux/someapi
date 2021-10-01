@@ -12,7 +12,7 @@ module Api
   , loginUser
   , activateUserAccount
   , getNotes
-  , postNote
+  , createNote
   ) where
 
 import Servant
@@ -29,13 +29,13 @@ import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation(..))
 import App (App)
 import Model
-   (User(..), UserWithPassword(..), UserLogin(..), Auth(..),
-   Scope(..), ScopeField(..), Token(..), makePassword)
+   (User(..), UserWithPassword(..), UserLogin(..), Auth(..), Note(..), NoteInput(..),
+   Scope(..), Token(..), makePassword)
 import Email (sendActivationLink)
 import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
-import UserTypes (Email, makeEmail)
+import UserTypes (makeEmail)
 import qualified Query
 
 type UserAPI =
@@ -45,7 +45,7 @@ type UserAPI =
   :<|> ActivateUser
   :<|> LoginUser
   :<|> GetNotes
-  :<|> PostNote
+  :<|> CreateNote
 
 type GetUser = "user" :> Capture "userid" (P.Key User) :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
@@ -53,7 +53,7 @@ type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
 type GetNotes = "notes" :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
-type PostNote = "note" :> ReqBody '[JSON] NoteInput :> Header "Authorization" Token :> Post '[JSON] (P.Key Note)
+type CreateNote = "note" :> ReqBody '[JSON] NoteInput :> Header "Authorization" Token :> Post '[JSON] (P.Key Note)
 
 userApi :: Proxy UserAPI
 userApi = Proxy
@@ -108,12 +108,6 @@ getUser userId = do
     Nothing -> throwIO err404 { errBody = "User not found" }
     Just user -> return user
 
-getProtected :: Text -> Maybe Token -> App Text
-getProtected = getProtectedResource Protected
-
-getAdmin :: Text -> Maybe Token -> App Text
-getAdmin = getProtectedResource Admin
-
 -- | Trim token before decoding to remove 'Bearer' prefix, otherwise invalid token error
 getNotes :: Maybe Token -> App [Entity Note]
 getNotes Nothing = throwIO err401 { errBody = "No token found" }
@@ -121,15 +115,20 @@ getNotes (Just (Token token)) = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
   case eScope of
     Left err -> throwIO err400 { errBody = LB.fromString err}
-    Right Scope {..} -> if protectedAccess then getNotes' else throwIO err403 { errBody = "Not Authorised" }
+    Right Scope {..} -> if protectedAccess then Query.getNotes else throwIO err403 { errBody = "Not Authorised" }
 
-postNote :: NoteInput -> Maybe Token -> App (P.Key Note)
-postNote _ Nothing = throwIO err401 { errBody = "No token found" }
-postNote note (Just (Token token)) = do
+createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
+createNote _ Nothing = throwIO err401 { errBody = "No token found" }
+createNote note (Just (Token token)) = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
   case eScope of
     Left err -> throwIO err400 { errBody = LB.fromString err }
-    Right Scope {..} -> if protectedAccess then postNote' note else throwIO err403 { errBody = "Not Authorised" }
+    Right Scope {..} -> if protectedAccess then insertNote note else throwIO err403 { errBody = "Not Authorised" }
+    where
+      insertNote noteInput = do
+        time' <- liftIO getCurrentTime
+        validNote <- parseNote noteInput time'
+        Query.insertNote validNote
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
@@ -146,13 +145,3 @@ getFormInput formData = token
   where
     nameValuePairs = inputs formData
     token = maybe "" iValue $ headMaybe nameValuePairs
-
-getNotes' :: App [Entity Note]
-getNotes' = runDB $ P.selectList [] []
-
-postNote' :: NoteInput -> App (P.Key Note)
-postNote' noteInput = do
-  time' <- liftIO getCurrentTime
-  case validNote noteInput time' of
-    Left _err -> throwIO err400 { errBody = "Invalid note" }
-    Right note -> runDB $ P.insert note

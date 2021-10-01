@@ -33,7 +33,7 @@ import Database.Persist.Sql (Entity(..), toSqlKey)
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson (toJSON)
-import Model (User(..), UserWithPassword(..), UserLogin(..), Token(..), Key(..), Note(..))
+import Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), Token(..), Key(..), Note(..))
 import Api (userApi)
 import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
 
@@ -56,6 +56,11 @@ instance ToSchema Note where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
     & mapped.schema.description ?~ "Note"
     & mapped.schema.example ?~ toJSON noteSample
+
+instance ToSchema NoteInput where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "NoteInput"
+    & mapped.schema.example ?~ toJSON noteInputSample
 
 instance ToSchema Email where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
@@ -120,6 +125,9 @@ userSample = User nameSample ageSample emailSample (Just True)
 
 noteSample :: Note
 noteSample = Note (toSqlKey 1) nameSample "do something good" (makeUTCTime (2021, 9, 30) (20, 42, 0))
+
+noteInputSample :: NoteInput
+noteInputSample = NoteInput (toSqlKey 1) "some name" "do something good"
 
 userWPSample :: UserWithPassword
 userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "password"

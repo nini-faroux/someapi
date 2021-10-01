@@ -68,7 +68,7 @@ data NoteInput =
     userId :: !(Key User)
   , noteName :: !Text
   , noteBody :: !Text
-  }
+  } deriving (Eq, Show, Generic)
 
 data UserWithPassword =
   UserWithPassword {
@@ -86,8 +86,10 @@ data UserLogin =
 
 instance FromJSON UserWithPassword
 instance FromJSON UserLogin
+instance FromJSON NoteInput
 instance ToJSON UserWithPassword
 instance ToJSON UserLogin
+instance ToJSON NoteInput
 
 instance Z.HasField "userName" User Name where
   hasField r = (\x -> r{userName=x}, userName r)

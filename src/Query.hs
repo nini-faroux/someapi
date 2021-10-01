@@ -1,8 +1,8 @@
 module Query
   ( getAuth
   , insertAuth
-  -- , getNotes
-  -- , insertNote
+  , getNotes
+  , insertNote
   , insertUser
   , getUsers
   , getUserById
@@ -15,7 +15,7 @@ import Database.Esqueleto.Experimental
  (Entity(..), InnerJoin(..), 
   select, from, on, table, val, where_, insert, val,
   (==.), (^.), (:&)(..))
-import Model (User(..), EntityField(..), Auth(..), runDB)
+import Model (User(..), Note(..), EntityField(..), Auth(..), runDB)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import App (App)
 import UserTypes (Name, Email)
@@ -36,15 +36,11 @@ getAuth email =
 insertAuth :: P.Key User -> PasswordHash Bcrypt -> App (P.Key Auth)
 insertAuth userId password = runDB . insert $ Auth {authUserId = userId, authPassword = password}
 
--- getNotes :: App [Entity Note]
--- getNotes = runDB $ P.selectList [] []
+getNotes :: App [Entity Note]
+getNotes = runDB $ P.selectList [] []
 
--- insertNote :: NoteInput -> App (P.Key Note)
--- insertNote noteInput = do
---   time' <- liftIO getCurrentTime
---   case validNote noteInput time' of
---     Left _err -> throwIO err400 { errBody = "Invalid note" }
---     Right note -> runDB $ P.insert note
+insertNote :: Note -> App (P.Key Note)
+insertNote note = runDB $ P.insert note
 
 getUsers :: App [Entity User]
 getUsers = runDB $ P.selectList [] []
