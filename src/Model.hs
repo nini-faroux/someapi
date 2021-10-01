@@ -10,6 +10,8 @@ module Model
   ( User(..)
   , UserWithPassword(..)
   , UserLogin(..)
+  , Note(..)
+  , NoteInput(..)
   , Auth(..)
   , Scope(..)
   , ScopeField(..)
@@ -24,6 +26,7 @@ module Model
   where
 
 import RIO (Text, Generic, runReaderT, asks, liftIO)
+import RIO.Time (UTCTime)
 import qualified Database.Persist.TH as PTH
 import Database.Persist.Sql (Key, EntityField)
 import Database.Persist.Postgresql
@@ -51,7 +54,21 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     password (PasswordHash Bcrypt)
     UniqueUserId userId
     deriving Eq
+
+  Note json
+    userId (Key User)
+    userName Name
+    noteBody Text
+    timeCreated UTCTime
+    deriving Eq Show Generic
 |]
+
+data NoteInput =
+  NoteInput {
+    userId :: !(Key User)
+  , noteName :: !Text
+  , noteBody :: !Text
+  }
 
 data UserWithPassword =
   UserWithPassword {

@@ -32,6 +32,7 @@ library
       Email
       JWT
       Model
+      Query
       Server
       UserTypes
       Validation
@@ -146,7 +147,6 @@ test-suite some-api-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      TestInput
       Paths_some_api
   hs-source-dirs:
       test

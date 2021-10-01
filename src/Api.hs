@@ -23,9 +23,7 @@ import RIO.List (headMaybe)
 import qualified Data.Text as T
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental
- (Entity(..), InnerJoin(..), 
-  select, from, on, table, val, where_, insert, fromSqlKey, val,
-  (==.), (^.), (:&)(..))
+ (Entity(..), fromSqlKey)
 import Data.Password.Bcrypt (PasswordCheck(..), mkPassword, checkPassword)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation(..))
@@ -36,7 +34,8 @@ import Model
 import Email (sendActivationLink)
 import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import Validation (parseUser)
-import UserTypes (Email, makeEmail)
+import UserTypes (makeEmail)
+import qualified Query
 
 type UserAPI =
        GetUsers
@@ -64,7 +63,7 @@ loginUser UserLogin {..} = do
   exists <- emailExists email
   if not exists then throwIO err401 { errBody = authErrorMessage }
   else do 
-    auth <- getAuth email
+    auth <- Query.getAuth email
     case auth of
       [Entity _ (Auth _uid hashPass)] -> do
         let pass' = mkPassword loginPassword
@@ -89,27 +88,24 @@ loginUser UserLogin {..} = do
           _user -> return True
       authErrorMessage = "Incorrect username or password, or account not yet activated"
 
-getAuth :: Email -> App [Entity Auth]
-getAuth email =
-  runDB $
-      select $ do
-      (user :& auth) <-
-          from $
-          table @User `InnerJoin` table @Auth
-          `on`
-          (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
-      where_ (user ^. UserEmail ==. val email)
-      where_ (user ^. UserActivated ==. val (Just True))
-      pure auth
-
 createUser :: UserWithPassword -> App Int64
 createUser uwp@UserWithPassword {..} = do
     user <- parseUser uwp
     pass <- liftIO $ makePassword password
-    newUserId <- runDB $ insert user
-    _ <- runDB . insert $ Auth {authUserId = newUserId, authPassword = pass}
+    newUserId <- Query.insertUser user
+    _ <- Query.insertAuth newUserId pass
     liftIO $ sendActivationLink user
     return $ fromSqlKey newUserId
+
+getUsers :: App [Entity User]
+getUsers = Query.getUsers
+
+getUser :: P.Key User -> App (Entity User)
+getUser userId = do
+  mUser <- Query.getUserById userId
+  case mUser of
+    Nothing -> throwIO err404 { errBody = "User not found" }
+    Just user -> return user
 
 getProtected :: Text -> Maybe Token -> App Text
 getProtected = getProtectedResource Protected
@@ -136,24 +132,11 @@ activateUserAccount formData = do
   case eUser of
     Left err -> throwIO err400 { errBody = LB.fromString err }
     Right user -> do
-      _ <- runDB $ P.updateWhere [UserEmail P.==. user.userEmail,
-                                  UserName P.==. user.userName,
-                                  UserActivated P.==. Just False]
-                                 [UserActivated P.=. Just True]
-      runDB $ P.selectFirst [UserEmail P.==. user.userEmail] []
+      Query.updateUserActivatedValue user.userEmail user.userName
+      Query.getUserByEmail user.userEmail
 
 getFormInput :: MultipartData Mem -> Text
 getFormInput formData = token
   where
     nameValuePairs = inputs formData
     token = maybe "" iValue $ headMaybe nameValuePairs
-
-getUsers :: App [Entity User]
-getUsers = runDB $ P.selectList [] []
-
-getUser :: P.Key User -> App (Entity User)
-getUser userId = do
-  mUser <- runDB $ P.selectFirst [UserId P.==. userId] []
-  case mUser of
-    Nothing -> throwIO err404 { errBody = "User not found" }
-    Just user -> return user
