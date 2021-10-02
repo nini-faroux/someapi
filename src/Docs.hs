@@ -29,7 +29,7 @@ import RIO.Text (Text)
 import RIO.Time (UTCTime(UTCTime), TimeOfDay(TimeOfDay), fromGregorian, timeOfDayToTime)
 import Data.Fixed (Pico)
 import Lens.Micro (mapped, (&), (?~), (.~))
-import Database.Persist.Sql (Entity(..), toSqlKey)
+import Database.Persist.Sql (Entity(..))
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson (toJSON)
@@ -135,10 +135,10 @@ userSample :: User
 userSample = User nameSample ageSample emailSample (Just True)
 
 noteSample :: Note
-noteSample = Note (toSqlKey 1) noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0))
+noteSample = Note nameSample noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0))
 
 noteInputSample :: NoteInput
-noteInputSample = NoteInput (toSqlKey 1) "some name" "do something good"
+noteInputSample = NoteInput "nini" "some name" "do something good"
 
 userWPSample :: UserWithPassword
 userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "password"

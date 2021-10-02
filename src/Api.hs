@@ -35,7 +35,7 @@ import Email (sendActivationLink)
 import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
-import UserTypes (makeEmail)
+import UserTypes (makeEmail, makeName)
 import qualified Query
 
 type UserAPI =
@@ -113,7 +113,16 @@ getNotes = notesRequest Query.getNotes
 
 createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
 createNote note = notesRequest (insertNote note)
-  where insertNote noteInput = parseNote noteInput >>= \validNote -> Query.insertNote validNote
+  where
+    insertNote noteInput@NoteInput {..} = do
+      let name = makeName noteAuthor
+      case name of
+        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+        Success validName -> do
+          mUser <- Query.getUserByName validName
+          case mUser of
+            Nothing -> throwIO err400 { errBody = "User name doesn't exist" }
+            Just _user -> parseNote noteInput >>= \validNote -> Query.insertNote validNote
 
 notesRequest :: App a -> Maybe Token -> App a
 notesRequest _ Nothing = throwIO err401 { errBody = "No token found" }

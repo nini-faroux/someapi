@@ -48,6 +48,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     email Email
     activated Bool Maybe
     UniqueEmail email
+    UniqueName name
     deriving Eq Show Read Generic
 
   Auth
@@ -57,7 +58,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     deriving Eq
 
   Note json
-    userId (Key User)
+    userName Name
     noteTitle NoteTitle
     noteBody NoteBody
     timeCreated UTCTime
@@ -66,7 +67,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
 
 data NoteInput =
   NoteInput {
-    userId :: !(Key User)
+    noteAuthor :: !Text
   , noteTitle :: !Text
   , noteBody :: !Text
   } deriving (Eq, Show, Generic)

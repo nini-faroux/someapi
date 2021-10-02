@@ -7,6 +7,7 @@ module Query
   , getUsers
   , getUserById
   , getUserByEmail
+  , getUserByName
   , updateUserActivatedValue
   ) where
 
@@ -53,6 +54,9 @@ getUserById userId = runDB $ P.selectFirst [UserId P.==. userId] []
 
 getUserByEmail :: Email -> App (Maybe (Entity User))
 getUserByEmail email = runDB $ P.selectFirst [UserEmail P.==. email] []
+
+getUserByName :: Name -> App (Maybe (Entity User))
+getUserByName name = runDB $ P.selectFirst [UserName P.==. name] []
 
 updateUserActivatedValue :: Email -> Name -> App ()
 updateUserActivatedValue email name = runDB $ 
