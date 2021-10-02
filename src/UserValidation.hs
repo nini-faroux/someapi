@@ -4,11 +4,11 @@ import Servant (errBody, err400)
 import RIO (Text, throwIO)
 import Data.Validation (Validation(..))
 import qualified Data.ByteString.Lazy.UTF8 as LB
-import qualified Database.Persist as P
 import Validation (VError(..))
-import Model (UserWithPassword(..), User(..), EntityField(UserEmail), runDB)
+import Model (UserWithPassword(..), User(..))
 import App (App)
 import UserTypes (makeName, makeAge, makeEmail, validActivation, validPassword)
+import qualified Query
 
 parseUser :: UserWithPassword -> App User
 parseUser uwp@UserWithPassword {..} = do
@@ -27,7 +27,7 @@ parseUser uwp@UserWithPassword {..} = do
       case makeEmail emailAddr of
         Failure _err -> return $ Success False
         Success email' -> do
-          mUser <- runDB $ P.selectFirst [UserEmail P.==. email'] []
+          mUser <- Query.getUserByEmail email'
           case mUser of
             Nothing -> return $ Success False
             _user -> return $ Failure [ExistingEmail]

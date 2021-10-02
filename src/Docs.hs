@@ -36,6 +36,7 @@ import Data.Aeson (toJSON)
 import Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), Token(..), Key(..), Note(..))
 import Api (userApi)
 import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
+import NoteTypes (NoteTitle, NoteBody, noteTitleSample, noteBodySample)
 
 writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
@@ -61,6 +62,16 @@ instance ToSchema NoteInput where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
     & mapped.schema.description ?~ "NoteInput"
     & mapped.schema.example ?~ toJSON noteInputSample
+
+instance ToSchema NoteBody where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "NoteBody"
+    & mapped.schema.example ?~ toJSON noteBodySample
+
+instance ToSchema NoteTitle where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "NoteTitle"
+    & mapped.schema.example ?~ toJSON noteTitleSample
 
 instance ToSchema Email where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
@@ -124,7 +135,7 @@ userSample :: User
 userSample = User nameSample ageSample emailSample (Just True)
 
 noteSample :: Note
-noteSample = Note (toSqlKey 1) nameSample "do something good" (makeUTCTime (2021, 9, 30) (20, 42, 0))
+noteSample = Note (toSqlKey 1) noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0))
 
 noteInputSample :: NoteInput
 noteInputSample = NoteInput (toSqlKey 1) "some name" "do something good"

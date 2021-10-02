@@ -92,7 +92,7 @@ validPassword pass
   | otherwise = Success pass
   where lengthPass = T.length pass
 
--- | Export for the swagger docs
+-- | Export for the swagger docs and tests
 nameSample :: Name
 nameSample = Name "nini"
 
