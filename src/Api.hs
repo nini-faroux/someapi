@@ -108,26 +108,20 @@ getUser userId = do
     Nothing -> throwIO err404 { errBody = "User not found" }
     Just user -> return user
 
--- | Trim token before decoding to remove 'Bearer' prefix, otherwise invalid token error
 getNotes :: Maybe Token -> App [Entity Note]
-getNotes Nothing = throwIO err401 { errBody = "No token found" }
-getNotes (Just (Token token)) = do
-  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
-  case eScope of
-    Left err -> throwIO err400 { errBody = LB.fromString err}
-    Right Scope {..} -> if protectedAccess then Query.getNotes else throwIO err403 { errBody = "Not Authorised" }
+getNotes = notesRequest Query.getNotes 
 
 createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
-createNote _ Nothing = throwIO err401 { errBody = "No token found" }
-createNote note (Just (Token token)) = do
-  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 (T.init $ T.drop 8 token)
+createNote note = notesRequest (insertNote note)
+  where insertNote noteInput = parseNote noteInput >>= \validNote -> Query.insertNote validNote
+
+notesRequest :: App a -> Maybe Token -> App a
+notesRequest _ Nothing = throwIO err401 { errBody = "No token found" }
+notesRequest query (Just (Token token)) = do
+  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token
   case eScope of
     Left err -> throwIO err400 { errBody = LB.fromString err }
-    Right Scope {..} -> if protectedAccess then insertNote note else throwIO err403 { errBody = "Not Authorised" }
-    where
-      insertNote noteInput = do
-        validNote <- parseNote noteInput
-        Query.insertNote validNote
+    Right Scope {..} -> if protectedAccess then query else throwIO err403 { errBody = "Not Authorised" }
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
