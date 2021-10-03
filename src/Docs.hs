@@ -34,7 +34,7 @@ import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson (toJSON)
 import Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), Token(..), Key(..), Note(..))
-import Api (userApi)
+import Api (noteApi)
 import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
 import NoteTypes (NoteTitle, NoteBody, noteTitleSample, noteBodySample)
 
@@ -42,7 +42,7 @@ writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
 
 userSwagger :: Swagger
-userSwagger = toSwagger userApi
+userSwagger = toSwagger noteApi
   & info.title   .~ "some API"
   & info.version .~ "1.0"
   & info.description ?~ "some api"

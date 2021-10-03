@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Servant (serve)
-import Api (userApi)
+import Api (noteApi)
 import Server (hoistAppServer)
 import App (Env(..))
 import Model (runMigrations, initialEnv)
@@ -13,4 +13,4 @@ main = do
   writeSwaggerJSON
   Env {..} <- initialEnv
   _ <- runMigrations
-  run port $ serve userApi $ hoistAppServer $ Env connectionPool port
+  run port $ serve noteApi $ hoistAppServer $ Env connectionPool port

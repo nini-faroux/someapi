@@ -1,14 +1,10 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
 module Api 
-  ( UserAPI
+  ( NoteAPI
   , CreateUser
-  , GetUser
-  , GetUsers
-  , userApi
+  , noteApi
   , createUser
-  , getUser
-  , getUsers
   , loginUser
   , activateUserAccount
   , getNotes
@@ -40,18 +36,14 @@ import UserTypes (makeName)
 import NoteTypes (NoteRequest(..))
 import qualified Query
 
-type UserAPI =
-       GetUsers
-  :<|> GetUser
-  :<|> CreateUser
+type NoteAPI =
+       CreateUser
   :<|> ActivateUser
   :<|> LoginUser
   :<|> GetNotes
   :<|> CreateNote
   :<|> GetNotesByName
 
-type GetUser = "user" :> Capture "userid" (P.Key User) :> Get '[JSON] (Entity User)
-type GetUsers = "users" :> Get '[JSON] [Entity User]
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
 type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
@@ -59,8 +51,8 @@ type GetNotes = "notes" :> Header "Authorization" Token :> Get '[JSON] [Entity N
 type CreateNote = "note" :> ReqBody '[JSON] NoteInput :> Header "Authorization" Token :> Post '[JSON] (P.Key Note)
 type GetNotesByName = "notes" :> Capture "username" Text :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
 
-userApi :: Proxy UserAPI
-userApi = Proxy
+noteApi :: Proxy NoteAPI
+noteApi = Proxy
 
 createUser :: UserWithPassword -> App Int64
 createUser uwp@UserWithPassword {..} = do
@@ -101,16 +93,6 @@ loginUser UserLogin {..} = do
           Nothing -> return False
           _user -> return True
       authErrorMessage = "Incorrect username or password, or account not yet activated"
-
-getUsers :: App [Entity User]
-getUsers = Query.getUsers
-
-getUser :: P.Key User -> App (Entity User)
-getUser userId = do
-  mUser <- Query.getUserById userId
-  case mUser of
-    Nothing -> throwIO err404 { errBody = "User not found" }
-    Just user -> return user
 
 getNotes :: Maybe Token -> App [Entity Note]
 getNotes = notesRequest Query.getNotes Nothing GetNoteRequest
