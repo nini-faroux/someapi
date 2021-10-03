@@ -12,25 +12,31 @@ import qualified Query
 
 parseUser :: UserWithPassword -> App User
 parseUser uwp@UserWithPassword {..} = do
-  exists <- emailExists email
-  let emailExistsError = otherError exists
+  emailExists <- existsError email makeEmail ExistingEmail Query.getUserByEmail
+  nameExists <- existsError name makeName ExistingUserName Query.getUserByName
+  let emailExistsError = otherError emailExists
+  let nameExistsError = otherError nameExists
   let passwordError = otherError $ validPassword password
   case validUser uwp of
-    Success user -> if null emailExistsError && null passwordError then return user
-                    else throwIO err400 { errBody = errorsToBS [emailExistsError, passwordError] }
-    Failure userErrors -> throwIO err400 { errBody = errorsToBS [userErrors, emailExistsError, passwordError] }
+    Success user -> if null emailExistsError && null nameExistsError && null passwordError then return user
+                    else throwIO err400 { errBody = errorsToBS [emailExistsError, nameExistsError, passwordError] }
+    Failure userErrors -> throwIO err400 { errBody = errorsToBS [userErrors, emailExistsError, nameExistsError, passwordError] }
   where 
-    errorsToBS :: [[VError]] -> LB.ByteString
-    errorsToBS ess = LB.fromString $ show $ concat ess
-    emailExists :: Text -> App (Validation [VError] Bool)
-    emailExists emailAddr =
-      case makeEmail emailAddr of
+    existsError :: Text
+                -> (Text -> Validation [VError] a)
+                -> VError
+                -> (a -> App (Maybe b))
+                -> App (Validation [VError] Bool)
+    existsError txt make verror query =
+      case make txt of
         Failure _err -> return $ Success False
-        Success email' -> do
-          mUser <- Query.getUserByEmail email'
+        Success validEntry -> do
+          mUser <- query validEntry
           case mUser of
             Nothing -> return $ Success False
-            _user -> return $ Failure [ExistingEmail]
+            _user -> return $ Failure [verror]
+    errorsToBS :: [[VError]] -> LB.ByteString
+    errorsToBS ess = LB.fromString $ show $ concat ess
     otherError :: Validation [VError] a -> [VError]
     otherError valid =
       case valid of

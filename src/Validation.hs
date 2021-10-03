@@ -2,6 +2,7 @@ module Validation (VError(..)) where
 
 data VError =
     ExistingEmail
+  | ExistingUserName
   | InvalidEmail
   | InvalidAge
   | InvalidName
