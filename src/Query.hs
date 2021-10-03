@@ -21,8 +21,8 @@ import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import App (App)
 import UserTypes (Name, Email)
 
-getAuth :: Email -> App [Entity Auth]
-getAuth email =
+getAuth :: Name -> App [Entity Auth]
+getAuth name =
   runDB $
       select $ do
       (user :& auth) <-
@@ -30,7 +30,7 @@ getAuth email =
           table @User `InnerJoin` table @Auth
           `on`
           (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
-      where_ (user ^. UserEmail ==. val email)
+      where_ (user ^. UserName ==. val name)
       where_ (user ^. UserActivated ==. val (Just True))
       pure auth
 

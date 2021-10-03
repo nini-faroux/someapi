@@ -14,7 +14,6 @@ module Model
   , NoteInput(..)
   , Auth(..)
   , Scope(..)
-  , ScopeField(..)
   , Token(..)
   , EntityField(..)
   , Key(..)
@@ -82,7 +81,7 @@ data UserWithPassword =
 
 data UserLogin =
   UserLogin {
-    loginEmail :: !Text
+    loginName :: !Text
   , loginPassword :: !Text
   } deriving (Eq, Show, Generic)
 
@@ -98,9 +97,8 @@ instance Z.HasField "userName" User Name where
 instance Z.HasField "userEmail" User Email where
   hasField r = (\x -> r{userEmail=x}, userEmail r)
 
-data Scope = Scope { protectedAccess :: Bool, adminAccess :: Bool }
+data Scope = Scope { protectedAccess :: Bool, tokenUserName :: Name }
   deriving stock (Show, Eq, Generic)
-data ScopeField = Protected | Admin deriving Eq
 
 newtype Token = Token { token :: Text }
   deriving (Eq, Show, Generic, FromHttpApiData, ToHttpApiData)

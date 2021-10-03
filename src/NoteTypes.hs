@@ -4,6 +4,7 @@
 module NoteTypes 
   ( NoteTitle
   , NoteBody
+  , NoteRequest(..)
   , makeName
   , makeBody
   , noteTitleSample
@@ -19,6 +20,7 @@ import Validation (VError(..))
 
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)
 newtype NoteBody = NoteBody Text deriving (Eq, Show, Read, Generic)
+data NoteRequest = CreateNoteRequest | GetNoteRequest deriving Eq
 
 instance FromJSON NoteTitle
 instance ToJSON NoteTitle

@@ -35,7 +35,8 @@ import Email (sendActivationLink)
 import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
-import UserTypes (makeEmail, makeName)
+import UserTypes (makeName)
+import NoteTypes (NoteRequest(..))
 import qualified Query
 
 type UserAPI =
@@ -60,11 +61,11 @@ userApi = Proxy
 
 loginUser :: UserLogin -> App Token
 loginUser UserLogin {..} = do
-  email <- validEmail loginEmail
-  exists <- emailExists email
+  name <- validName loginName
+  exists <- nameExists name
   if not exists then throwIO err401 { errBody = authErrorMessage }
   else do 
-    auth <- Query.getAuth email
+    auth <- Query.getAuth name
     case auth of
       [Entity _ (Auth _uid hashPass)] -> do
         let pass' = mkPassword loginPassword
@@ -72,18 +73,18 @@ loginUser UserLogin {..} = do
           PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
           PasswordCheckSuccess -> do
             now <- getCurrentTime
-            let token = makeAuthToken (Scope {protectedAccess = True, adminAccess = False}) now
+            let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = name}) now
             case decodeUtf8' token of
               Left _ -> return $ Token ""
               Right token' -> return $ Token token'
       _ -> throwIO err401 { errBody = authErrorMessage }
     where
-      validEmail email =
-        case makeEmail email of
-          Failure _err -> throwIO err400 { errBody = "Invalid email address" }
-          Success email' -> return email'
-      emailExists email = do
-        mUser <- Query.getUserByEmail email
+      validName name =
+        case makeName name of
+          Failure _err -> throwIO err400 { errBody = "Invalid name" }
+          Success name' -> return name'
+      nameExists name = do
+        mUser <- Query.getUserByName name
         case mUser of
           Nothing -> return False
           _user -> return True
@@ -109,28 +110,31 @@ getUser userId = do
     Just user -> return user
 
 getNotes :: Maybe Token -> App [Entity Note]
-getNotes = notesRequest Query.getNotes 
+getNotes = notesRequest Query.getNotes Nothing GetNoteRequest
 
 createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
-createNote note = notesRequest (insertNote note)
+createNote note@NoteInput{..} = notesRequest (insertNote note) (Just noteAuthor) CreateNoteRequest
   where
-    insertNote noteInput@NoteInput {..} = do
-      let name = makeName noteAuthor
-      case name of
-        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-        Success validName -> do
-          mUser <- Query.getUserByName validName
-          case mUser of
-            Nothing -> throwIO err400 { errBody = "User name doesn't exist" }
-            Just _user -> parseNote noteInput >>= \validNote -> Query.insertNote validNote
+    insertNote noteInput = parseNote noteInput >>= \validNote -> Query.insertNote validNote
 
-notesRequest :: App a -> Maybe Token -> App a
-notesRequest _ Nothing = throwIO err401 { errBody = "No token found" }
-notesRequest query (Just (Token token)) = do
+notesRequest :: App a -> Maybe Text -> NoteRequest -> Maybe Token -> App a
+notesRequest _ _ _ Nothing = throwIO err401 { errBody = "No token found" }
+notesRequest query mName requestType (Just (Token token)) = do
   eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token
   case eScope of
     Left err -> throwIO err400 { errBody = LB.fromString err }
-    Right Scope {..} -> if protectedAccess then query else throwIO err403 { errBody = "Not Authorised" }
+    Right Scope {..} -> check requestType query mName protectedAccess tokenUserName
+    where
+      check request query' mName' protectedAccess tokenName
+        | not protectedAccess = throwIO err403 { errBody = "Not Authorised" }
+        | request == GetNoteRequest = query'
+        | validName mName' tokenName = query'
+        | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name" }
+      validName Nothing _tName = False
+      validName (Just name') tName =
+        case makeName name' of
+          Failure _err -> False
+          Success validName' -> validName' == tName
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
