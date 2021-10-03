@@ -5,7 +5,7 @@ module NoteTypes
   ( NoteTitle
   , NoteBody
   , NoteRequest(..)
-  , makeName
+  , makeTitle
   , makeBody
   , noteTitleSample
   , noteBodySample
@@ -35,8 +35,8 @@ makeBody body
   | T.length body < 5 || T.length body > 300 = Failure [InvalidNoteBody]
   | otherwise = Success $ NoteBody body
 
-makeName :: Text -> Validation [VError] NoteTitle
-makeName name
+makeTitle :: Text -> Validation [VError] NoteTitle
+makeTitle name
   | nameLength < 5 || nameLength > 30 = Failure [InvalidName] 
   | otherwise = Success $ NoteTitle name
   where nameLength = T.length name

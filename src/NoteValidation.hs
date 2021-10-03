@@ -8,7 +8,7 @@ import Data.Validation (Validation(..))
 import Model (NoteInput(..), Note(..))
 import Validation (VError(..))
 import App (App)
-import NoteTypes (makeBody, makeName)
+import NoteTypes (makeBody, makeTitle)
 import qualified UserTypes
 
 parseNote :: NoteInput -> App Note
@@ -23,7 +23,7 @@ parseNote noteInput = do
 
 validNote :: NoteInput -> UTCTime -> Validation [VError] Note
 validNote NoteInput {..} time =
-  Note <$> UserTypes.makeName noteAuthor <*> makeName noteTitle <*> makeBody noteBody <*> validTime time
+  Note <$> UserTypes.makeName noteAuthor <*> makeTitle noteTitle <*> makeBody noteBody <*> validTime time
 
 validTime :: UTCTime -> Validation [VError] UTCTime
 validTime = Success
