@@ -2,6 +2,7 @@ module Query
   ( getAuth
   , insertAuth
   , getNotes
+  , getNotesByName
   , insertNote
   , insertUser
   , getUsers
@@ -33,6 +34,13 @@ getAuth name =
       where_ (user ^. UserName ==. val name)
       where_ (user ^. UserActivated ==. val (Just True))
       pure auth
+
+getNotesByName :: Name -> App [Entity Note]
+getNotesByName name = runDB $
+  select $ do
+    note <- from $ table @Note
+    where_ (note ^. NoteUserName ==. val name)
+    pure note
 
 insertAuth :: P.Key User -> PasswordHash Bcrypt -> App (P.Key Auth)
 insertAuth userId password = runDB . insert $ Auth {authUserId = userId, authPassword = password}

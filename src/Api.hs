@@ -13,6 +13,7 @@ module Api
   , activateUserAccount
   , getNotes
   , createNote
+  , getNotesByName
   ) where
 
 import Servant
@@ -47,6 +48,7 @@ type UserAPI =
   :<|> LoginUser
   :<|> GetNotes
   :<|> CreateNote
+  :<|> GetNotesByName
 
 type GetUser = "user" :> Capture "userid" (P.Key User) :> Get '[JSON] (Entity User)
 type GetUsers = "users" :> Get '[JSON] [Entity User]
@@ -55,9 +57,19 @@ type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post 
 type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
 type GetNotes = "notes" :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
 type CreateNote = "note" :> ReqBody '[JSON] NoteInput :> Header "Authorization" Token :> Post '[JSON] (P.Key Note)
+type GetNotesByName = "notes" :> Capture "username" Text :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
 
 userApi :: Proxy UserAPI
 userApi = Proxy
+
+createUser :: UserWithPassword -> App Int64
+createUser uwp@UserWithPassword {..} = do
+    user <- parseUser uwp
+    pass <- liftIO $ makePassword password
+    newUserId <- Query.insertUser user
+    _ <- Query.insertAuth newUserId pass
+    liftIO $ sendActivationLink user
+    return $ fromSqlKey newUserId
 
 loginUser :: UserLogin -> App Token
 loginUser UserLogin {..} = do
@@ -90,15 +102,6 @@ loginUser UserLogin {..} = do
           _user -> return True
       authErrorMessage = "Incorrect username or password, or account not yet activated"
 
-createUser :: UserWithPassword -> App Int64
-createUser uwp@UserWithPassword {..} = do
-    user <- parseUser uwp
-    pass <- liftIO $ makePassword password
-    newUserId <- Query.insertUser user
-    _ <- Query.insertAuth newUserId pass
-    liftIO $ sendActivationLink user
-    return $ fromSqlKey newUserId
-
 getUsers :: App [Entity User]
 getUsers = Query.getUsers
 
@@ -111,6 +114,18 @@ getUser userId = do
 
 getNotes :: Maybe Token -> App [Entity Note]
 getNotes = notesRequest Query.getNotes Nothing GetNoteRequest
+
+getNotesByName :: Text -> Maybe Token -> App [Entity Note]
+getNotesByName noteAuthor = notesRequest (query noteAuthor) (Just noteAuthor) GetNotesByNameRequest
+  where
+    query author =
+      case makeName author of
+        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+        Success validName -> do
+          mUser <- Query.getUserByName validName
+          case mUser of
+            Nothing -> throwIO err404 { errBody = "User not found" }
+            Just _user -> Query.getNotesByName validName
 
 createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
 createNote note@NoteInput{..} = notesRequest (insertNote note) (Just noteAuthor) CreateNoteRequest
@@ -127,9 +142,9 @@ notesRequest query mName requestType (Just (Token token)) = do
     where
       check request query' mName' protectedAccess tokenName
         | not protectedAccess = throwIO err403 { errBody = "Not Authorised" }
-        | request == GetNoteRequest = query'
+        | request == GetNoteRequest || request == GetNotesByNameRequest = query'
         | validName mName' tokenName = query'
-        | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name" }
+        | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name to create new notes" }
       validName Nothing _tName = False
       validName (Just name') tName =
         case makeName name' of

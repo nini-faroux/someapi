@@ -20,7 +20,7 @@ import Validation (VError(..))
 
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)
 newtype NoteBody = NoteBody Text deriving (Eq, Show, Read, Generic)
-data NoteRequest = CreateNoteRequest | GetNoteRequest deriving Eq
+data NoteRequest = CreateNoteRequest | GetNoteRequest | GetNotesByNameRequest deriving Eq
 
 instance FromJSON NoteTitle
 instance ToJSON NoteTitle
