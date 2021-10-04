@@ -3,6 +3,7 @@
 module Api 
   ( NoteAPI
   , CreateUser
+  , CreateNote
   , noteApi
   , createUser
   , loginUser
@@ -117,7 +118,7 @@ createNote note@NoteInput{..} = notesRequest (insertNote note) (Just noteAuthor)
 notesRequest :: App a -> Maybe Text -> NoteRequest -> Maybe Token -> App a
 notesRequest _ _ _ Nothing = throwIO err401 { errBody = "No token found" }
 notesRequest query mName requestType (Just (Token token)) = do
-  eScope <- liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token
+  eScope <- decodeToken token
   case eScope of
     Left err -> throwIO err400 { errBody = LB.fromString err }
     Right Scope {..} -> check requestType query mName protectedAccess tokenUserName
@@ -132,6 +133,9 @@ notesRequest query mName requestType (Just (Token token)) = do
         case makeName name' of
           Failure _err -> False
           Success validName' -> validName' == tName
+      decodeToken token'
+        | T.length token' == 279 = liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
+        | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do

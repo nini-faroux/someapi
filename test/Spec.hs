@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+import RIO.Time (getCurrentTime)
 import Test.Hspec
 import Test.Hspec.Wai
 import Test.Hspec.Wai.JSON
@@ -9,15 +10,16 @@ import Network.HTTP.Client hiding (Proxy, responseBody)
 import qualified Database.Persist as P
 import Data.Aeson (object, (.=), encode)
 import Database.Persist.Sql (Entity(..), toSqlKey)
-import RIO (liftIO)
+import RIO (liftIO, decodeUtf8')
 import Data.String (IsString)
 import Servant
 import Servant.Client
 import Api
-import Server (userServer, hoistAppServer)
+import Server (noteServer, hoistAppServer)
 import Model
 import App
 import UserTypes (nameSample, ageSample, emailSample)
+import JWT (makeAuthToken)
 
 main :: IO ()
 main = hspec apiTests
@@ -26,16 +28,10 @@ apiTests :: Spec
 apiTests =
   around withUserApp $ do
     let createUser = client (Proxy :: Proxy CreateUser)
-    let getUser = client (Proxy :: Proxy GetUser)
-    let getUsers = client (Proxy :: Proxy GetUsers)
+    let createNote = client (Proxy :: Proxy CreateNote)
     baseUrl <- runIO $ parseBaseUrl "http://localhost"
     manager <- runIO $ newManager defaultManagerSettings
     let clientEnv = mkClientEnv manager (baseUrl { baseUrlPort = 8000 })
-
-    describe "GET /users" $
-      it "should return empty list of users" $ \_port -> do
-        result <- runClientM getUsers clientEnv
-        result `shouldBe` Right []
 
     describe "POST /user" $
       it "should not create invalid user, and should report all validation errors" $ \_port -> do
@@ -50,7 +46,7 @@ apiTests =
       it "should create a valid user" $ \_port -> do
         result <- runClientM (createUser userWPSample1) clientEnv
         case result of
-          Left (FailureResponse _ response) -> do
+          Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response
           Right res -> liftIO $ print res
         result `shouldBe` Right 1
@@ -61,38 +57,47 @@ apiTests =
         case result of
           Left (FailureResponse _ response) -> do
             liftIO $ print $ responseBody response
-            responseBody response `shouldBe` "[ExistingEmail]"
+            responseBody response `shouldBe` "[ExistingEmail,ExistingUserName]"
           Right res -> liftIO $ print res
 
-    describe "GET /users" $
-      it "should return list of users" $ \_port -> do
-        result <- runClientM getUsers clientEnv
-        result `shouldBe` Right [createdEntityUserFromSample1]
+    describe "POST /note" $
+      it "should successfully create a new note" $ \_port -> do
+        now <- getCurrentTime
+        let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = nameSample}) now
+        case decodeUtf8' token of
+          Left _ -> liftIO $ print "couldn't decode token"
+          Right token' -> do
+            let note = NoteInput  "nini" "some note" "do something good"
+            result <- runClientM (createNote note (Just $ Token token')) clientEnv
+            case result of
+              Left (FailureResponse _ response) ->
+                liftIO $ print $ responseBody response
+              Right res -> liftIO $ print res
+            result `shouldBe` Right (toSqlKey 1)
 
-    describe "GET /user/1" $
-      it "should get valid user" $ \_port -> do
-        result <- runClientM (getUser (toSqlKey 1)) clientEnv
-        case result of
-          Left err -> liftIO $ print err
-          Right result -> liftIO $ print result
-        result `shouldBe` Right createdEntityUserFromSample1
-
-    describe "GET /user/300" $
-      it "should fail with user not found" $ \_port -> do
-        result <- runClientM (getUser (toSqlKey 300)) clientEnv
-        case result of
-          Left (FailureResponse _ response) -> do
-            liftIO $ print $ responseBody response
-            responseBody response `shouldBe` "User not found"
+    describe "POST /note" $
+     it "should fail with wrong user name" $ \_port -> do
+       now <- getCurrentTime
+       let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = nameSample}) now
+       case decodeUtf8' token of
+         Left _ -> liftIO $ print "couldn't decode token"
+         Right token' -> do
+           let note = NoteInput  "major" "some note" "do something else"
+           result <- runClientM (createNote note (Just $ Token token')) clientEnv
+           case result of
+             Left (FailureResponse _ response) -> do
+               liftIO $ print $ responseBody response
+               responseBody response `shouldBe` "Not Authorised - use your own user name to create new notes" 
+             Right res -> liftIO $ print res
 
 withUserApp :: (Port -> IO ()) -> IO ()
-withUserApp = testWithApplication userApp
+withUserApp = testWithApplication noteApp
 
-userApp :: IO Application
-userApp = serve userApi <$> userServer'
+noteApp :: IO Application
+noteApp = serve noteApi <$> noteServer'
 
-userServer' :: IO (Server UserAPI)
-userServer' = initialEnv >>= \env -> pure $ hoistAppServer env 
+noteServer' :: IO (Server NoteAPI)
+noteServer' = initialEnv >>= \env -> pure $ hoistAppServer env 
 
 userWPSample1 :: UserWithPassword
 userWPSample1 = UserWithPassword "nini" 100 "nini@mail.com" "password"
