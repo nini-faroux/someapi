@@ -15,7 +15,7 @@ module Api
 
 import Servant
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
-import RIO (Text, Int64, encodeUtf8, decodeUtf8', throwIO, liftIO)
+import RIO (Text, Int64, encodeUtf8, decodeUtf8', throwIO, liftIO, unless)
 import RIO.Time (getCurrentTime)
 import RIO.List (headMaybe)
 import qualified Data.Text as T
@@ -68,32 +68,31 @@ loginUser :: UserLogin -> App Token
 loginUser UserLogin {..} = do
   name <- validName loginName
   exists <- nameExists name
-  if not exists then throwIO err401 { errBody = authErrorMessage }
-  else do 
-    auth <- Query.getAuth name
-    case auth of
-      [Entity _ (Auth _uid hashPass)] -> do
-        let pass' = mkPassword loginPassword
-        case checkPassword pass' hashPass of
-          PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
-          PasswordCheckSuccess -> do
-            now <- getCurrentTime
-            let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = name}) now
-            case decodeUtf8' token of
-              Left _ -> return $ Token ""
-              Right token' -> return $ Token token'
-      _ -> throwIO err401 { errBody = authErrorMessage }
-    where
-      validName name =
-        case makeName name of
-          Failure _err -> throwIO err400 { errBody = "Invalid name" }
-          Success name' -> return name'
-      nameExists name = do
-        mUser <- Query.getUserByName name
-        case mUser of
-          Nothing -> return False
-          _user -> return True
-      authErrorMessage = "Incorrect username or password, or account not yet activated"
+  unless exists $ throwIO err401 { errBody = authErrorMessage }
+  auth <- Query.getAuth name
+  case auth of
+    [Entity _ (Auth _uid hashPass)] -> do
+      let pass' = mkPassword loginPassword
+      case checkPassword pass' hashPass of
+        PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
+        PasswordCheckSuccess -> do
+          now <- getCurrentTime
+          let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = name}) now
+          case decodeUtf8' token of
+            Left _ -> return $ Token ""
+            Right token' -> return $ Token token'
+    _ -> throwIO err401 { errBody = authErrorMessage }
+  where
+    validName name =
+      case makeName name of
+        Failure _err -> throwIO err400 { errBody = "Invalid name" }
+        Success name' -> return name'
+    nameExists name = do
+      mUser <- Query.getUserByName name
+      case mUser of
+        Nothing -> return False
+        _user -> return True
+    authErrorMessage = "Incorrect username or password, or account not yet activated"
 
 getNotes :: Maybe Token -> App [Entity Note]
 getNotes = notesRequest Query.getNotes Nothing GetNoteRequest
@@ -133,9 +132,12 @@ notesRequest query mName requestType (Just (Token token)) = do
         case makeName name' of
           Failure _err -> False
           Success validName' -> validName' == tName
+      -- Need to trim the token to account for the 'Bearer' prefix 
+      -- otherwise in that case it will raise a decoding error
       decodeToken token'
-        | T.length token' == 279 = liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
+        | hasBearerPrefix token' = liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
         | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
+      hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
