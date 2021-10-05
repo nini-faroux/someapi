@@ -36,7 +36,7 @@ import Data.Aeson (toJSON)
 import Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), Token(..), Key(..), Note(..))
 import Api (noteApi)
 import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
-import NoteTypes (NoteTitle, NoteBody, noteTitleSample, noteBodySample)
+import NoteTypes (NoteTitle, NoteBody, Day, DayField, Month, Year, DayInput(..), noteTitleSample, noteBodySample, daySample)
 
 writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
@@ -72,6 +72,25 @@ instance ToSchema NoteTitle where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
     & mapped.schema.description ?~ "NoteTitle"
     & mapped.schema.example ?~ toJSON noteTitleSample
+
+instance ToSchema Day where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "Day"
+    & mapped.schema.example ?~ toJSON daySample
+
+instance ToSchema DayField where
+  declareNamedSchema _ = pure $ NamedSchema Nothing mempty
+
+instance ToSchema Month where
+  declareNamedSchema _ = pure $ NamedSchema Nothing mempty
+
+instance ToSchema Year where
+  declareNamedSchema _ = pure $ NamedSchema Nothing mempty
+
+instance ToSchema DayInput where
+  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
+    & mapped.schema.description ?~ "DayInput"
+    & mapped.schema.example ?~ toJSON dayInputSample
 
 instance ToSchema Email where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
@@ -135,10 +154,13 @@ userSample :: User
 userSample = User nameSample ageSample emailSample (Just True)
 
 noteSample :: Note
-noteSample = Note nameSample noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0))
+noteSample = Note nameSample noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0)) daySample
 
 noteInputSample :: NoteInput
 noteInputSample = NoteInput "nini" "some name" "do something good"
+
+dayInputSample :: DayInput
+dayInputSample = DayInput 2021 10 5
 
 userWPSample :: UserWithPassword
 userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "password"

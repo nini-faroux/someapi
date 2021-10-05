@@ -11,6 +11,7 @@ module Api
   , getNotes
   , createNote
   , getNotesByName
+  , getNotesByDay
   ) where
 
 import Servant
@@ -34,7 +35,7 @@ import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (makeName)
-import NoteTypes (NoteRequest(..))
+import NoteTypes (NoteRequest(..), DayInput(..), validDay)
 import qualified Query
 
 type NoteAPI =
@@ -44,6 +45,7 @@ type NoteAPI =
   :<|> GetNotes
   :<|> CreateNote
   :<|> GetNotesByName
+  :<|> GetNotesByDay
 
 type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
 type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
@@ -51,6 +53,7 @@ type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
 type GetNotes = "notes" :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
 type CreateNote = "note" :> ReqBody '[JSON] NoteInput :> Header "Authorization" Token :> Post '[JSON] (P.Key Note)
 type GetNotesByName = "notes" :> Capture "username" Text :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
+type GetNotesByDay = "notesbyday" :> ReqBody '[JSON] DayInput :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
 
 noteApi :: Proxy NoteAPI
 noteApi = Proxy
@@ -109,6 +112,14 @@ getNotesByName noteAuthor = notesRequest (query noteAuthor) (Just noteAuthor) Ge
             Nothing -> throwIO err404 { errBody = "User not found" }
             Just _user -> Query.getNotesByName validName
 
+getNotesByDay :: DayInput -> Maybe Token -> App [Entity Note]
+getNotesByDay dayInput = notesRequest (query dayInput) Nothing GetNotesByDayRequest
+  where
+    query dayInput' =
+      case validDay dayInput' of
+        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+        Success day -> Query.getNotesByDay day
+
 createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
 createNote note@NoteInput{..} = notesRequest (insertNote note) (Just noteAuthor) CreateNoteRequest
   where
@@ -124,7 +135,7 @@ notesRequest query mName requestType (Just (Token token)) = do
     where
       check request query' mName' protectedAccess tokenName
         | not protectedAccess = throwIO err403 { errBody = "Not Authorised" }
-        | request == GetNoteRequest || request == GetNotesByNameRequest = query'
+        | request == GetNoteRequest || request == GetNotesByNameRequest || request == GetNotesByDayRequest = query'
         | validName mName' tokenName = query'
         | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name to create new notes" }
       validName Nothing _tName = False

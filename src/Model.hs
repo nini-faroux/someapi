@@ -38,7 +38,7 @@ import App (App, Env(..))
 import Say (say)
 import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
 import UserTypes (Name, Email, Age)
-import NoteTypes (NoteTitle, NoteBody)
+import NoteTypes (NoteTitle, NoteBody, Day)
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
@@ -61,15 +61,9 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     noteTitle NoteTitle
     noteBody NoteBody
     timeCreated UTCTime
+    dayCreated Day
     deriving Eq Show Generic
 |]
-
-data NoteInput =
-  NoteInput {
-    noteAuthor :: !Text
-  , noteTitle :: !Text
-  , noteBody :: !Text
-  } deriving (Eq, Show, Generic)
 
 data UserWithPassword =
   UserWithPassword {
@@ -78,18 +72,24 @@ data UserWithPassword =
   , email :: !Text
   , password :: !Text
   } deriving (Eq, Show, Generic)
+instance FromJSON UserWithPassword
+instance ToJSON UserWithPassword
 
 data UserLogin =
   UserLogin {
     loginName :: !Text
   , loginPassword :: !Text
   } deriving (Eq, Show, Generic)
-
-instance FromJSON UserWithPassword
 instance FromJSON UserLogin
-instance FromJSON NoteInput
-instance ToJSON UserWithPassword
 instance ToJSON UserLogin
+
+data NoteInput =
+  NoteInput {
+    noteAuthor :: !Text
+  , noteTitle :: !Text
+  , noteBody :: !Text
+  } deriving (Eq, Show, Generic)
+instance FromJSON NoteInput
 instance ToJSON NoteInput
 
 instance Z.HasField "userName" User Name where
@@ -102,7 +102,6 @@ data Scope = Scope { protectedAccess :: Bool, tokenUserName :: Name }
 
 newtype Token = Token { token :: Text }
   deriving (Eq, Show, Generic, FromHttpApiData, ToHttpApiData)
-
 instance FromJSON Token
 instance ToJSON Token
 

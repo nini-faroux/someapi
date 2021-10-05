@@ -3,6 +3,7 @@ module Query
   , insertAuth
   , getNotes
   , getNotesByName
+  , getNotesByDay
   , insertNote
   , insertUser
   , getUsers
@@ -14,13 +15,14 @@ module Query
 
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental
- (Entity(..), InnerJoin(..), 
+ (Entity(..), InnerJoin(..),
   select, from, on, table, val, where_, insert, val,
   (==.), (^.), (:&)(..))
 import Model (User(..), Note(..), EntityField(..), Auth(..), runDB)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import App (App)
 import UserTypes (Name, Email)
+import NoteTypes (Day)
 
 getAuth :: Name -> App [Entity Auth]
 getAuth name =
@@ -40,6 +42,13 @@ getNotesByName name = runDB $
   select $ do
     note <- from $ table @Note
     where_ (note ^. NoteUserName ==. val name)
+    pure note
+
+getNotesByDay :: Day -> App [Entity Note]
+getNotesByDay day = runDB $
+  select $ do
+    note <- from $ table @Note
+    where_ (note ^. NoteDayCreated ==. val day)
     pure note
 
 insertAuth :: P.Key User -> PasswordHash Bcrypt -> App (P.Key Auth)
