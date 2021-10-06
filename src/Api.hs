@@ -11,7 +11,6 @@ module Api
   , getNotes
   , createNote
   , getNotesByName
-  , getNotesByDay
   ) where
 
 import Servant
@@ -45,7 +44,6 @@ type NoteAPI =
   :<|> GetNotes
   :<|> CreateNote
   :<|> GetNotesByName
-  :<|> GetNotesByDay
 
 type CreateUser =
      "user"
@@ -73,11 +71,6 @@ type CreateNote =
 type GetNotesByName =
      "notes"
   :> Capture "username" Text
-  :> Header "Authorization" Token
-  :> Get '[JSON] [Entity Note]
-type GetNotesByDay =
-     "notesbyday"
-  :> ReqBody '[JSON] DayInput
   :> Header "Authorization" Token
   :> Get '[JSON] [Entity Note]
 
@@ -165,14 +158,6 @@ getNotes mStartDate mEndDate = notesRequest (query mStartDate mEndDate) Nothing 
             Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
             Success end -> if end < start then throwIO err400 { errBody = "Error: end date before start date" }
                            else Query.getNotesBetweenDates start end
-
-getNotesByDay :: DayInput -> Maybe Token -> App [Entity Note]
-getNotesByDay dayInput = notesRequest (query dayInput) Nothing GetNotesByDayRequest
-  where
-    query dayInput' =
-      case validDayText dayInput' of
-        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-        Success day -> Query.getNotesByDay day
 
 createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
 createNote note@NoteInput{..} = notesRequest (insertNote note) (Just noteAuthor) CreateNoteRequest
