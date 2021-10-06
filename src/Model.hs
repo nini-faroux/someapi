@@ -38,7 +38,7 @@ import App (App, Env(..))
 import Say (say)
 import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
 import UserTypes (Name, Email, Age)
-import NoteTypes (NoteTitle, NoteBody, Day)
+import NoteTypes (NoteTitle, NoteBody)
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
@@ -61,7 +61,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     noteTitle NoteTitle
     noteBody NoteBody
     timeCreated UTCTime
-    dayCreated Day
+    dayCreated Text
     deriving Eq Show Generic
 |]
 

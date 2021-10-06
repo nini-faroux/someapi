@@ -17,7 +17,7 @@ module Api
 import Servant
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
 import RIO (Text, Int64, encodeUtf8, decodeUtf8', throwIO, liftIO, unless)
-import RIO.Time (getCurrentTime)
+import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import qualified Data.Text as T
 import qualified Database.Persist as P
@@ -35,7 +35,7 @@ import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (makeName)
-import NoteTypes (NoteRequest(..), DayInput(..), validDay)
+import NoteTypes (NoteRequest(..), DayInput(..), validDay, validDayText)
 import qualified Query
 
 type NoteAPI =
@@ -47,13 +47,39 @@ type NoteAPI =
   :<|> GetNotesByName
   :<|> GetNotesByDay
 
-type CreateUser = "user" :> ReqBody '[JSON] UserWithPassword :> Post '[JSON] Int64
-type ActivateUser = "activate" :> MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))
-type LoginUser = "login" :> ReqBody '[JSON] UserLogin :> Post '[JSON] Token
-type GetNotes = "notes" :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
-type CreateNote = "note" :> ReqBody '[JSON] NoteInput :> Header "Authorization" Token :> Post '[JSON] (P.Key Note)
-type GetNotesByName = "notes" :> Capture "username" Text :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
-type GetNotesByDay = "notesbyday" :> ReqBody '[JSON] DayInput :> Header "Authorization" Token :> Get '[JSON] [Entity Note]
+type CreateUser =
+     "user"
+  :> ReqBody '[JSON] UserWithPassword
+  :> Post '[JSON] Int64
+type ActivateUser =
+     "activate"
+  :> MultipartForm Mem (MultipartData Mem)
+  :> Post '[JSON] (Maybe (Entity User))
+type LoginUser =
+     "login"
+  :> ReqBody '[JSON] UserLogin
+  :> Post '[JSON] Token
+type GetNotes =
+    "notes"
+  :> QueryParam "start" Text
+  :> QueryParam "end" Text
+  :> Header "Authorization" Token
+  :> Get '[JSON] [Entity Note]
+type CreateNote =
+     "note"
+  :> ReqBody '[JSON] NoteInput
+  :> Header "Authorization" Token
+  :> Post '[JSON] (P.Key Note)
+type GetNotesByName =
+     "notes"
+  :> Capture "username" Text
+  :> Header "Authorization" Token
+  :> Get '[JSON] [Entity Note]
+type GetNotesByDay =
+     "notesbyday"
+  :> ReqBody '[JSON] DayInput
+  :> Header "Authorization" Token
+  :> Get '[JSON] [Entity Note]
 
 noteApi :: Proxy NoteAPI
 noteApi = Proxy
@@ -97,9 +123,6 @@ loginUser UserLogin {..} = do
         _user -> return True
     authErrorMessage = "Incorrect username or password, or account not yet activated"
 
-getNotes :: Maybe Token -> App [Entity Note]
-getNotes = notesRequest Query.getNotes Nothing GetNoteRequest
-
 getNotesByName :: Text -> Maybe Token -> App [Entity Note]
 getNotesByName noteAuthor = notesRequest (query noteAuthor) (Just noteAuthor) GetNotesByNameRequest
   where
@@ -112,11 +135,42 @@ getNotesByName noteAuthor = notesRequest (query noteAuthor) (Just noteAuthor) Ge
             Nothing -> throwIO err404 { errBody = "User not found" }
             Just _user -> Query.getNotesByName validName
 
+getNotes :: Maybe Text -> Maybe Text -> Maybe Token -> App [Entity Note]
+getNotes mStartDate mEndDate = notesRequest (query mStartDate mEndDate) Nothing GetNoteRequest
+  where
+    query Nothing Nothing = Query.getNotes
+    query (Just startDate) Nothing =
+      case validDay startDate of
+        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+        Success start -> do
+          time <- liftIO getCurrentTime
+          let (year, month, day) = toGregorian $ utctDay time
+          case validDayText (DayInput year month day) of
+            Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+            Success end -> if start > end then throwIO err400 { errBody = "Error: end date before start date" }
+                           else Query.getNotesBetweenDates start end
+    query Nothing (Just endDate) =
+      case validDay endDate of
+        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+        Success end -> do
+          mStart <- Query.getFirstDay
+          case mStart of
+            Nothing -> Query.getNotes
+            Just start -> Query.getNotesBetweenDates start end
+    query (Just startDate) (Just endDate) =
+      case validDay startDate of
+        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+        Success start ->
+          case validDay endDate of
+            Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+            Success end -> if end < start then throwIO err400 { errBody = "Error: end date before start date" }
+                           else Query.getNotesBetweenDates start end
+
 getNotesByDay :: DayInput -> Maybe Token -> App [Entity Note]
 getNotesByDay dayInput = notesRequest (query dayInput) Nothing GetNotesByDayRequest
   where
     query dayInput' =
-      case validDay dayInput' of
+      case validDayText dayInput' of
         Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
         Success day -> Query.getNotesByDay day
 

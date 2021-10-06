@@ -4,6 +4,8 @@ module Query
   , getNotes
   , getNotesByName
   , getNotesByDay
+  , getNotesBetweenDates
+  , getFirstDay
   , insertNote
   , insertUser
   , getUsers
@@ -13,16 +15,16 @@ module Query
   , updateUserActivatedValue
   ) where
 
+import RIO (Text)
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental
  (Entity(..), InnerJoin(..),
-  select, from, on, table, val, where_, insert, val,
-  (==.), (^.), (:&)(..))
+  select, from, on, table, val, where_, insert, val, min_, unValue,
+  (==.), (>=.), (<=.), (^.), (:&)(..))
 import Model (User(..), Note(..), EntityField(..), Auth(..), runDB)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import App (App)
 import UserTypes (Name, Email)
-import NoteTypes (Day)
 
 getAuth :: Name -> App [Entity Auth]
 getAuth name =
@@ -37,6 +39,24 @@ getAuth name =
       where_ (user ^. UserActivated ==. val (Just True))
       pure auth
 
+getNotesBetweenDates :: Text -> Text -> App [Entity Note]
+getNotesBetweenDates start end = runDB $
+  select $ do
+    note <- from $ table @Note
+    where_ (note ^. NoteDayCreated >=. val start)
+    where_ (note ^. NoteDayCreated  <=. val end)
+    pure note
+
+getFirstDay :: App (Maybe Text)
+getFirstDay = runDB $ do
+  days <- select $ do
+    note <- from $ table @Note
+    let mDay = min_ (note ^. NoteDayCreated)
+    pure mDay
+  case days of
+    [] -> pure Nothing
+    (day:_) -> pure $ unValue day
+
 getNotesByName :: Name -> App [Entity Note]
 getNotesByName name = runDB $
   select $ do
@@ -44,7 +64,7 @@ getNotesByName name = runDB $
     where_ (note ^. NoteUserName ==. val name)
     pure note
 
-getNotesByDay :: Day -> App [Entity Note]
+getNotesByDay :: Text -> App [Entity Note]
 getNotesByDay day = runDB $
   select $ do
     note <- from $ table @Note

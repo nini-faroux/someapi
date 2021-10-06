@@ -11,6 +11,7 @@ module NoteTypes
   , NoteRequest(..)
   , DayInput(..)
   , validDay
+  , validDayText
   , makeTitle
   , makeBody
   , makeYear
@@ -21,21 +22,38 @@ module NoteTypes
   , daySample
   ) where
 
-import RIO (Text, Generic)
+import RIO (Text, Generic, isNothing, readMaybe, fromMaybe)
 import Data.Validation (Validation(..))
 import qualified Data.Text as T
 import qualified Database.Persist.TH as PTH
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Char (isDigit)
 import Validation (VError(..))
 
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)
 newtype NoteBody = NoteBody Text deriving (Eq, Show, Read, Generic)
 
-data Day = Day Year Month DayField deriving (Eq, Show, Read, Generic)
+data Day = Day Year Month DayField deriving (Eq, Ord, Read, Generic)
 
-newtype Year = Year Integer deriving (Eq, Show, Read, Generic)
-newtype Month = Month Int deriving (Eq, Show, Read, Generic)
-newtype DayField = DayField Int deriving (Eq, Show, Read, Generic)
+newtype Year = Year Integer deriving (Eq, Ord, Read, Generic)
+newtype Month = Month Int deriving (Eq, Ord, Read, Generic)
+newtype DayField = DayField Int deriving (Eq, Ord, Read, Generic)
+
+instance Show Day where
+  show (Day year month day) = show year ++ ":" ++ show month ++ ":" ++ show day
+
+instance Show Year where
+  show (Year year) = show year
+
+instance Show Month where
+  show (Month month)
+    | month >= 0 && month < 10 = "0" ++ show month
+    | otherwise = show month
+
+instance Show DayField where
+  show (DayField day)
+    | day >= 0 && day < 10 = "0" ++ show day
+    | otherwise = show day
 
 data NoteRequest = CreateNoteRequest | GetNoteRequest | GetNotesByNameRequest | GetNotesByDayRequest deriving Eq
 
@@ -65,8 +83,28 @@ PTH.derivePersistField "NoteTitle"
 PTH.derivePersistField "NoteBody"
 PTH.derivePersistField "Day"
 
-validDay :: DayInput -> Validation [VError] Day
-validDay DayInput {..} = Day <$> makeYear dayYear <*> makeMonth dayMonth <*> makeDayField dayDay
+validDay' :: DayInput -> Validation [VError] Day
+validDay' DayInput {..} = Day <$> makeYear dayYear <*> makeMonth dayMonth <*> makeDayField dayDay
+
+validDayText :: DayInput -> Validation [VError] Text
+validDayText day =
+  case validDay' day of
+    Failure err -> Failure err
+    Success vDay -> Success $ T.pack $ show vDay
+
+validDay :: Text -> Validation [VError] Text
+validDay dateParam
+  | isNothing year || isNothing month || isNothing day = Failure [InvalidDate]
+  | otherwise =
+      case vDay of
+        Failure err -> Failure err
+        Success d -> Success $ T.pack $ show d
+  where
+    vDay = validDay' $ DayInput (fromMaybe 0 year) (fromMaybe 0 month) (fromMaybe 0 day)
+    year = readMaybe $ take 4 dateParam' :: Maybe Integer
+    month = readMaybe $ takeWhile isDigit $ drop 5 dateParam' :: Maybe Int
+    day = readMaybe $ takeWhile isDigit $ drop 1 $ dropWhile isDigit $ drop 5 dateParam' :: Maybe Int
+    dateParam' = T.unpack dateParam
 
 makeBody :: Text -> Validation [VError] NoteBody
 makeBody body
@@ -81,17 +119,17 @@ makeTitle name
 
 makeYear :: Integer -> Validation [VError] Year
 makeYear year
-  | year < 0 = Failure [InvalidYear]
+  | year < 2020 = Failure [InvalidYear]
   | otherwise = Success $ Year year
 
 makeMonth :: Int -> Validation [VError] Month
 makeMonth month
-  | month < 0 || month > 12 = Failure [InvalidMonth]
+  | month <= 0 || month > 12 = Failure [InvalidMonth]
   | otherwise = Success $ Month month
 
 makeDayField :: Int -> Validation [VError] DayField
 makeDayField day
-  | day < 0 || day > 31 = Failure [InvalidDay]
+  | day <= 0 || day > 31 = Failure [InvalidDay]
   | otherwise = Success $ DayField day
 
 -- | Export for the swagger docs and tests
@@ -101,5 +139,5 @@ noteTitleSample = NoteTitle "some name"
 noteBodySample :: NoteBody
 noteBodySample = NoteBody "do something good"
 
-daySample :: Day
-daySample = Day (Year 2021) (Month 10) (DayField 5)
+daySample :: Text
+daySample = T.pack $ show $ Day (Year 2021) (Month 10) (DayField 5)

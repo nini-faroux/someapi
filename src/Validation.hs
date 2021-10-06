@@ -10,6 +10,7 @@ data VError =
   | InvalidActivation
   | InvalidNoteBody
   | InvalidTime
+  | InvalidDate
   | InvalidDay
   | InvalidYear
   | InvalidMonth
