@@ -5,6 +5,7 @@ module Query
   , getNotesByName
   , getNotesByDay
   , getNotesBetweenDates
+  , getNotesBetweenDatesWithName
   , getFirstDay
   , insertNote
   , insertUser
@@ -47,6 +48,22 @@ getNotesBetweenDates start end = runDB $
     where_ (note ^. NoteDayCreated  <=. val end)
     pure note
 
+getNotesBetweenDatesWithName :: Name -> Text -> Text -> App [Entity Note]
+getNotesBetweenDatesWithName name start end = runDB $
+  select $ do
+    note <- from $ table @Note
+    where_ (note ^. NoteUserName ==. val name)
+    where_ (note ^. NoteDayCreated >=. val start)
+    where_ (note ^. NoteDayCreated <=. val end)
+    pure note
+
+getNotesByName :: Name -> App [Entity Note]
+getNotesByName name = runDB $
+  select $ do
+    note <- from $ table @Note
+    where_ (note ^. NoteUserName ==. val name)
+    pure note
+
 getFirstDay :: App (Maybe Text)
 getFirstDay = runDB $ do
   days <- select $ do
@@ -56,13 +73,6 @@ getFirstDay = runDB $ do
   case days of
     [] -> pure Nothing
     (day:_) -> pure $ unValue day
-
-getNotesByName :: Name -> App [Entity Note]
-getNotesByName name = runDB $
-  select $ do
-    note <- from $ table @Note
-    where_ (note ^. NoteUserName ==. val name)
-    pure note
 
 getNotesByDay :: Text -> App [Entity Note]
 getNotesByDay day = runDB $
