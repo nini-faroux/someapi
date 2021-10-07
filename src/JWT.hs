@@ -6,14 +6,13 @@
 module JWT 
   ( makeAuthToken
   , makeUserToken
-  , decodeAndValidateUser
-  , decodeAndValidateAuth
   , verifyAuthToken
+  , verifyUserToken
   ) where
 
 import Web.Libjwt
 import Servant (errBody, err400)
-import RIO hiding (catch)
+import RIO (Text, ByteString, MonadThrow, liftIO, encodeUtf8, displayException, throwIO)
 import RIO.Time (UTCTime, NominalDiffTime)
 import qualified Web.Libjwt as LJ
 import qualified Data.ByteString.Lazy.UTF8 as LB
@@ -27,6 +26,13 @@ import Model (User(..), Scope(..), Token(..))
 import Config (hmac512)
 import UserTypes (Name, Age, Email)
 import App (App)
+
+verifyUserToken :: Text -> App User
+verifyUserToken token = do
+  eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
+  case eUser of
+    Left err -> throwIO err400 { errBody = LB.fromString err }
+    Right user -> return user
 
 verifyAuthToken :: Maybe Token -> App Scope
 verifyAuthToken Nothing = throwIO err400 { errBody = "Token Missing" }

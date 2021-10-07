@@ -15,20 +15,19 @@ module Api
 
 import Servant
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
-import RIO (Text, Int64, encodeUtf8, decodeUtf8', throwIO, liftIO)
+import RIO (Text, Int64, decodeUtf8', throwIO, liftIO)
 import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental
  (Entity(..), fromSqlKey)
 import Data.Password.Bcrypt (PasswordCheck(..), mkPassword, checkPassword)
-import qualified Data.ByteString.Lazy.UTF8 as LB
 import App (App)
 import Model
    (User(..), UserWithPassword(..), UserLogin(..), Auth(..), Note(..), NoteInput(..),
    Scope(..), Token(..), makePassword)
 import Email (sendActivationLink)
-import JWT (makeAuthToken, decodeAndValidateUser, verifyAuthToken)
+import JWT (makeAuthToken, verifyAuthToken, verifyUserToken)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (Name)
@@ -187,13 +186,9 @@ getNotesByName noteAuthor mStart mEnd mToken = do
 -- The user is activated allowing them to authenticate
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do
-  let token = getFormInput formData
-  eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
-  case eUser of
-    Left err -> throwIO err400 { errBody = LB.fromString err }
-    Right user -> do
-      Query.updateUserActivatedValue user.userEmail user.userName
-      Query.getUserByEmail user.userEmail
+  user <- verifyUserToken $ getFormInput formData
+  Query.updateUserActivatedValue user.userEmail user.userName
+  Query.getUserByEmail user.userEmail
   where
     getFormInput :: MultipartData Mem -> Text
     getFormInput formData' = token
@@ -202,14 +197,12 @@ activateUserAccount formData = do
         token = maybe "" iValue $ headMaybe nameValuePairs
 
 notesRequest :: App a -> Maybe Name -> NoteRequest -> Scope -> App a
-notesRequest query mName requestType Scope {..} =
-  check requestType query mName protectedAccess tokenUserName
+notesRequest query mName requestType Scope {..}
+  | not protectedAccess = throwIO err403 { errBody = "Not Authorised" }
+  | requestType == GetNoteRequest || requestType == GetNotesByNameRequest || requestType == GetNotesByDayRequest = query
+  | matchingName mName tokenUserName = query
+  | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name to create new notes" }
   where
-    check request query' mName' protectedAccess' tokenName
-      | not protectedAccess' = throwIO err403 { errBody = "Not Authorised" }
-      | request == GetNoteRequest || request == GetNotesByNameRequest || request == GetNotesByDayRequest = query'
-      | matchingName mName' tokenName = query'
-      | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name to create new notes" }
     matchingName Nothing _tName = False
     matchingName (Just name') tName = name' == tName
 
