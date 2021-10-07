@@ -19,6 +19,8 @@ import Server (noteServer, hoistAppServer)
 import Model
 import App
 import UserTypes (nameSample, ageSample, emailSample)
+import NoteTypes (DayInput(..), validDay)
+import Data.Validation
 import JWT (makeAuthToken)
 
 main :: IO ()
@@ -89,6 +91,16 @@ apiTests =
                liftIO $ print $ responseBody response
                responseBody response `shouldBe` "Not Authorised - use your own user name to create new notes" 
              Right res -> liftIO $ print res
+
+    describe "compare days" $
+      it "should compare day types correctly" $ \_ -> do
+        let day1 = DayInput 2021 3 5
+            day2 = DayInput 2021 10 6
+        case validDay day1 of
+          Failure _ -> liftIO $ print "error valid day"
+          Success day1' -> case validDay day2 of
+            Failure _ -> liftIO $ print "error valid day"
+            Success day2' -> day2' >= day1' `shouldBe` True
 
 withUserApp :: (Port -> IO ()) -> IO ()
 withUserApp = testWithApplication noteApp
