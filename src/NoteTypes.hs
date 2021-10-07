@@ -12,6 +12,9 @@ module NoteTypes
   , DayInput(..)
   , validDay
   , validDayText
+  , makeValidDayText
+  , makeValidDay
+  , makeValidName
   , makeTitle
   , makeBody
   , makeYear
@@ -22,13 +25,17 @@ module NoteTypes
   , daySample
   ) where
 
-import RIO (Text, Generic, isNothing, readMaybe, fromMaybe)
+import Servant (errBody, err400)
+import RIO (Text, Generic, isNothing, readMaybe, fromMaybe, throwIO)
+import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation(..))
 import qualified Data.Text as T
 import qualified Database.Persist.TH as PTH
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Char (isDigit)
+import UserTypes (Name, makeName)
 import Validation (VError(..))
+import App (App)
 
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)
 newtype NoteBody = NoteBody Text deriving (Eq, Show, Read, Generic)
@@ -85,6 +92,25 @@ PTH.derivePersistField "Day"
 
 validDay' :: DayInput -> Validation [VError] Day
 validDay' DayInput {..} = Day <$> makeYear dayYear <*> makeMonth dayMonth <*> makeDayField dayDay
+
+makeValidDayText :: DayInput -> App Text
+makeValidDayText date =
+  case validDayText date of
+    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+    Success date' -> return date'
+
+makeValidName :: Maybe Text -> App (Maybe Name)
+makeValidName Nothing = return Nothing
+makeValidName (Just name) =
+  case makeName name of
+    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+    Success name' -> return $ Just name'
+
+makeValidDay :: Text -> App Text
+makeValidDay date =
+  case validDay date of
+    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+    Success date' -> return date'
 
 validDayText :: DayInput -> Validation [VError] Text
 validDayText day =

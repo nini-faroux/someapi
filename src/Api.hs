@@ -15,7 +15,7 @@ module Api
 
 import Servant
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
-import RIO (Text, Int64, encodeUtf8, decodeUtf8', throwIO, liftIO, unless)
+import RIO (Text, Int64, encodeUtf8, decodeUtf8', throwIO, liftIO)
 import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import qualified Data.Text as T
@@ -34,8 +34,7 @@ import JWT (makeAuthToken, decodeAndValidateAuth, decodeAndValidateUser)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (Name, makeName)
-import NoteTypes (NoteRequest(..), DayInput(..), validDay, validDayText)
-import Validation (VError(..))
+import NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidName)
 import qualified Query
 
 type NoteAPI =
@@ -92,9 +91,8 @@ createUser uwp@UserWithPassword {..} = do
 loginUser :: UserLogin -> App Token
 loginUser UserLogin {..} = do
   name <- validName' loginName
-  exists <- nameExists name
-  unless exists $ throwIO err401 { errBody = authErrorMessage }
-  auth <- Query.getAuth name
+  existingName <- getExistingName name
+  auth <- Query.getAuth existingName
   case auth of
     [Entity _ (Auth _uid hashPass)] -> do
       let pass' = mkPassword loginPassword
@@ -102,7 +100,7 @@ loginUser UserLogin {..} = do
         PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
         PasswordCheckSuccess -> do
           now <- getCurrentTime
-          let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = name}) now
+          let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = existingName}) now
           case decodeUtf8' token of
             Left _ -> return $ Token ""
             Right token' -> return $ Token token'
@@ -112,11 +110,11 @@ loginUser UserLogin {..} = do
       case makeName name of
         Failure _err -> throwIO err400 { errBody = "Invalid name" }
         Success name' -> return name'
-    nameExists name = do
+    getExistingName name = do
       mUser <- Query.getUserByName name
       case mUser of
-        Nothing -> return False
-        _user -> return True
+        Nothing -> throwIO err401 { errBody = authErrorMessage }
+        Just _user -> return name
     authErrorMessage = "Incorrect username or password, or account not yet activated"
 
 getNotesByName :: Text -> Maybe Text -> Maybe Text -> Maybe Token -> App [Entity Note]
@@ -137,56 +135,39 @@ getNotes mStartDate mEndDate = notesRequest (query mStartDate mEndDate) Nothing 
 
 getNotesBetweenDates :: Maybe Text -> Maybe Text -> Maybe Text -> App [Entity Note]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes
-getNotesBetweenDates (Just author) Nothing Nothing =
-  case makeName author of
-    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-    Success name -> Query.getNotesByName name
-getNotesBetweenDates mName (Just startDate) Nothing =
-  case validDay startDate of
-    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-    Success start -> do
-      time <- liftIO getCurrentTime
-      let (year, month, day) = toGregorian $ utctDay time
-      case validDayText (DayInput year month day) of
-        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-        Success end ->
-          case validName mName of
-            Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-            Success mname -> if start > end then throwIO err400 { errBody = "Error: end date before start date" }
-                             else queryBetweenDates mname start end
-getNotesBetweenDates mName Nothing (Just endDate) =
-  case validDay endDate of
-    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-    Success end -> do
-      mStart <- Query.getFirstDay
-      case mStart of
-        Nothing -> Query.getNotes
-        Just start -> case validName mName of
-          Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-          Success mname -> queryBetweenDates mname start end
-getNotesBetweenDates mName (Just startDate) (Just endDate) =
-  case validDay startDate of
-    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-    Success start ->
-      case validDay endDate of
-        Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-        Success end ->
-          case validName mName of
-            Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-            Success mname ->
-              if start > end then throwIO err400 { errBody = "Error: end date before start date" }
-              else queryBetweenDates mname start end
+getNotesBetweenDates justAuthor@(Just _author) Nothing Nothing = do
+  mname <- makeValidName justAuthor
+  Query.getNotesByName mname
+getNotesBetweenDates mName (Just startDate) (Just endDate) = do
+  (mname, start, end) <- getStartEndAndName mName startDate endDate makeValidDay
+  makeQuery mname start end
+getNotesBetweenDates mName (Just startDate) Nothing = do
+  time <- liftIO getCurrentTime
+  let (year, month, day) = toGregorian $ utctDay time
+  end <- makeValidDayText (DayInput year month day)
+  (mname, start, end') <- getStartEndAndName mName startDate end (const $ pure end)
+  makeQuery mname start end'
+getNotesBetweenDates mName Nothing (Just endDate) = do
+  mStart <- Query.getFirstDay
+  case mStart of
+    Nothing -> Query.getNotes
+    Just start -> do
+      end <- makeValidDay endDate
+      mname <- makeValidName mName
+      makeQuery mname start end
+
+getStartEndAndName :: Maybe Text -> Text -> Text -> (Text -> App Text) -> App (Maybe Name, Text, Text)
+getStartEndAndName mName start end makeDay =
+  makeValidDay start >>= \s -> makeDay end >>= \e -> makeValidName mName >>= \mn -> return (mn, s, e)
+
+makeQuery :: Maybe Name -> Text -> Text -> App [Entity Note]
+makeQuery mName start end
+  | start > end = throwIO err400 { errBody = "Error: end date is before start date" }
+  | otherwise = queryBetweenDates mName start end
 
 queryBetweenDates :: Maybe Name -> Text -> Text -> App [Entity Note]
 queryBetweenDates Nothing start end = Query.getNotesBetweenDates start end
 queryBetweenDates (Just name) start end = Query.getNotesBetweenDatesWithName name start end
-
-validName :: Maybe Text -> Validation [VError] (Maybe Name)
-validName Nothing = Success Nothing
-validName (Just name) =
-  case makeName name of
-    Failure err -> Failure err
-    Success name' -> Success $ Just name'
 
 createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
 createNote note@NoteInput{..} = notesRequest (insertNote note) (Just noteAuthor) CreateNoteRequest

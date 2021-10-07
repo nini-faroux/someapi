@@ -57,8 +57,9 @@ getNotesBetweenDatesWithName name start end = runDB $
     where_ (note ^. NoteDayCreated <=. val end)
     pure note
 
-getNotesByName :: Name -> App [Entity Note]
-getNotesByName name = runDB $
+getNotesByName :: Maybe Name -> App [Entity Note]
+getNotesByName Nothing = return []
+getNotesByName (Just name) = runDB $
   select $ do
     note <- from $ table @Note
     where_ (note ^. NoteUserName ==. val name)
