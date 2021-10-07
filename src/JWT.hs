@@ -8,20 +8,40 @@ module JWT
   , makeUserToken
   , decodeAndValidateUser
   , decodeAndValidateAuth
+  , verifyAuthToken
   ) where
 
 import Web.Libjwt
+import Servant (errBody, err400)
 import RIO hiding (catch)
 import RIO.Time (UTCTime, NominalDiffTime)
 import qualified Web.Libjwt as LJ
+import qualified Data.ByteString.Lazy.UTF8 as LB
+import qualified Data.Text as T
 import Servant.Auth.Server (def)
 import Control.Arrow (left)
 import Control.Exception (catch)
 import Data.Either.Validation (validationToEither)
 import Control.Monad.Time (MonadTime)
-import Model (User(..), Scope(..))
+import Model (User(..), Scope(..), Token(..))
 import Config (hmac512)
 import UserTypes (Name, Age, Email)
+import App (App)
+
+verifyAuthToken :: Maybe Token -> App Scope
+verifyAuthToken Nothing = throwIO err400 { errBody = "Token Missing" }
+verifyAuthToken (Just (Token token)) = do
+  eScope <- decodeToken token
+  case eScope of
+    Left err -> throwIO err400 { errBody = LB.fromString err }
+    Right scope -> return scope
+  where
+    -- Need to trim the token to account for the 'Bearer' prefix 
+    -- otherwise in that case it will raise a decoding error
+    decodeToken token'
+          | hasBearerPrefix token' = liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
+          | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
+    hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
 makeUserToken :: User -> UTCTime -> ByteString
 makeUserToken User {..} = makeToken claims 7200
