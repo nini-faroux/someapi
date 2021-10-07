@@ -13,8 +13,6 @@ module Model
   , Note(..)
   , NoteInput(..)
   , Auth(..)
-  , Scope(..)
-  , Token(..)
   , EntityField(..)
   , Key(..)
   , runDB
@@ -36,7 +34,6 @@ import Data.Password.Bcrypt (PasswordHash(..), Bcrypt, hashPassword, mkPassword)
 import Data.Password.Instances()
 import App (App, Env(..))
 import Say (say)
-import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
 import UserTypes (Name, Email, Age)
 import NoteTypes (NoteTitle, NoteBody)
 
@@ -65,6 +62,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     deriving Eq Show Generic
 |]
 
+-- | Input type for creating user
 data UserWithPassword =
   UserWithPassword {
     name :: !Text
@@ -75,6 +73,7 @@ data UserWithPassword =
 instance FromJSON UserWithPassword
 instance ToJSON UserWithPassword
 
+-- | Input type for user login
 data UserLogin =
   UserLogin {
     loginName :: !Text
@@ -83,6 +82,8 @@ data UserLogin =
 instance FromJSON UserLogin
 instance ToJSON UserLogin
 
+-- | Input type for the body of
+-- a new user note
 data NoteInput =
   NoteInput {
     noteAuthor :: !Text
@@ -96,14 +97,6 @@ instance Z.HasField "userName" User Name where
   hasField r = (\x -> r{userName=x}, userName r)
 instance Z.HasField "userEmail" User Email where
   hasField r = (\x -> r{userEmail=x}, userEmail r)
-
-data Scope = Scope { protectedAccess :: Bool, tokenUserName :: Name }
-  deriving stock (Show, Eq, Generic)
-
-newtype Token = Token { token :: Text }
-  deriving (Eq, Show, Generic, FromHttpApiData, ToHttpApiData)
-instance FromJSON Token
-instance ToJSON Token
 
 makePassword :: Text -> IO (PasswordHash Bcrypt)
 makePassword = hashPassword . mkPassword

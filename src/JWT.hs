@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module JWT 
-  ( makeAuthToken
+  ( Scope(..)
+  , Token(..)
+  , makeAuthToken
   , makeUserToken
   , verifyAuthToken
   , verifyUserToken
@@ -12,7 +17,7 @@ module JWT
 
 import Web.Libjwt
 import Servant (errBody, err400)
-import RIO (Text, ByteString, MonadThrow, liftIO, encodeUtf8, displayException, throwIO)
+import RIO (Text, ByteString, MonadThrow, Generic, liftIO, encodeUtf8, displayException, throwIO)
 import RIO.Time (UTCTime, NominalDiffTime)
 import qualified Web.Libjwt as LJ
 import qualified Data.ByteString.Lazy.UTF8 as LB
@@ -22,10 +27,33 @@ import Control.Arrow (left)
 import Control.Exception (catch)
 import Data.Either.Validation (validationToEither)
 import Control.Monad.Time (MonadTime)
-import Model (User(..), Scope(..), Token(..))
+import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
+import Data.Aeson (FromJSON, ToJSON)
+import Model (User(..))
 import Config (hmac512)
 import UserTypes (Name, Age, Email)
 import App (App)
+
+-- Type for the private claims of the JWT token
+data Scope = Scope { protectedAccess :: Bool, tokenUserName :: Name }
+  deriving stock (Show, Eq, Generic)
+
+newtype Token = Token { token :: Text }
+  deriving (Eq, Show, Generic, FromHttpApiData, ToHttpApiData)
+
+type UserJwt
+  = Jwt '["userName" ->> Name, "userAge" ->> Age, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs
+
+type AuthJwt = Jwt '["protectedAccess" ->> Bool, "tokenUserName" ->> Name] 'NoNs
+
+instance ToPrivateClaims User
+instance FromPrivateClaims User
+
+instance ToPrivateClaims Scope
+instance FromPrivateClaims Scope
+
+instance FromJSON Token
+instance ToJSON Token
 
 verifyUserToken :: Text -> App User
 verifyUserToken token = do
@@ -75,17 +103,6 @@ makeToken privateClaims' seconds = getToken . sign hmac512 <$> mkPayload
         , LJ.exp = Exp (Just $ now `plusSeconds` seconds)
         , privateClaims = toPrivateClaims privateClaims'
         }
-
-type UserJwt
-  = Jwt '["userName" ->> Name, "userAge" ->> Age, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs
-
-type AuthJwt = Jwt '["protectedAccess" ->> Bool, "tokenUserName" ->> Name] 'NoNs
-
-instance ToPrivateClaims User
-instance FromPrivateClaims User
-
-instance ToPrivateClaims Scope
-instance FromPrivateClaims Scope
 
 decodeAndValidateUser :: ByteString -> IO (Either String User)
 decodeAndValidateUser = decodeAndValidateFull decodeAndValidateUser'

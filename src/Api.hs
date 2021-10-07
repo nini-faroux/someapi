@@ -24,10 +24,9 @@ import Database.Esqueleto.Experimental
 import Data.Password.Bcrypt (PasswordCheck(..), mkPassword, checkPassword)
 import App (App)
 import Model
-   (User(..), UserWithPassword(..), UserLogin(..), Auth(..), Note(..), NoteInput(..),
-   Scope(..), Token(..), makePassword)
+   (User(..), UserWithPassword(..), UserLogin(..), Auth(..), Note(..), NoteInput(..), makePassword)
 import Email (sendActivationLink)
-import JWT (makeAuthToken, verifyAuthToken, verifyUserToken)
+import JWT (Scope(..), Token(..), makeAuthToken, verifyAuthToken, verifyUserToken)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (Name)
