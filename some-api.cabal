@@ -27,6 +27,7 @@ library
   exposed-modules:
       Api
       App
+      Authenticate
       Config
       Docs
       Email

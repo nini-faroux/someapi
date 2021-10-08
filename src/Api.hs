@@ -15,22 +15,22 @@ module Api
 
 import Servant
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
-import RIO (Text, Int64, decodeUtf8', throwIO, liftIO)
+import RIO (Text, Int64, throwIO, liftIO)
 import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental
  (Entity(..), fromSqlKey)
-import Data.Password.Bcrypt (PasswordCheck(..), mkPassword, checkPassword)
 import App (App)
 import Model
-   (User(..), UserWithPassword(..), UserLogin(..), Auth(..), Note(..), NoteInput(..), makePassword)
+   (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..), makePassword)
 import Email (sendActivationLink)
-import JWT (Scope(..), Token(..), makeAuthToken, verifyAuthToken, verifyUserToken)
+import JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (Name)
 import NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidNameM, makeValidName)
+import Authenticate (makeAuthToken', getAuth, checkPassword', checkUserCredentials, checkNameExists)
 import qualified Query
 
 type NoteAPI =
@@ -103,22 +103,10 @@ createUser uwp@UserWithPassword {..} = do
 loginUser :: UserLogin -> App Token
 loginUser UserLogin {..} = do
   name <- makeValidName loginName
-  existingName <- getExistingName name
-  auth <- Query.getAuth existingName
-  case auth of
-    [Entity _ (Auth _uid hashPass)] -> do
-      let pass' = mkPassword loginPassword
-      case checkPassword pass' hashPass of
-        PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
-        PasswordCheckSuccess -> do
-          now <- getCurrentTime
-          let token = makeAuthToken (Scope {protectedAccess = True, tokenUserName = existingName}) now
-          case decodeUtf8' token of
-            Left _ -> return $ Token ""
-            Right token' -> return $ Token token'
-    _ -> throwIO err401 { errBody = authErrorMessage }
-   where
-     authErrorMessage = "Incorrect username or password, or account not yet activated"
+  existingName <- checkNameExists name
+  hashPass <- getAuth existingName
+  _passCheck <- checkPassword' loginPassword hashPass
+  makeAuthToken' existingName
 
 -- | Endpoint for creating new notes, requires an active auth token
 -- The 'noteAuthor' field in the request's body must be the same as your own user name (the one you are logged in with)
@@ -202,8 +190,8 @@ notesRequest query mName requestType Scope {..}
   | matchingName mName tokenUserName = query
   | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name to create new notes" }
   where
-    matchingName Nothing _tName = False
-    matchingName (Just name') tName = name' == tName
+    matchingName Nothing _tokenName = False
+    matchingName (Just userName) tokenUserName' = userName == tokenUserName'
 
 getNotesBetweenDates :: Maybe Text -> Maybe Text -> Maybe Text -> App [Entity Note]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes
@@ -240,17 +228,3 @@ makeQuery mName start end
     queryBetweenDates :: Maybe Name -> Text -> Text -> App [Entity Note]
     queryBetweenDates Nothing start' end' = Query.getNotesBetweenDates start' end'
     queryBetweenDates (Just name) start' end' = Query.getNotesBetweenDatesWithName name start' end'
-
-checkUserCredentials :: Maybe Token -> Text -> App (Name, Scope)
-checkUserCredentials mToken author = do
-  scope <- verifyAuthToken mToken
-  name <- makeValidName author
-  existingName <- getExistingName name
-  return (existingName, scope)
-
-getExistingName :: Name -> App Name
-getExistingName name = do
-  mUser <- Query.getUserByName name
-  case mUser of
-    Nothing -> throwIO err404 { errBody = "User not found" }
-    Just _user -> return name
