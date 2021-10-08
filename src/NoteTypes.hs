@@ -14,7 +14,6 @@ module NoteTypes
   , validDayText
   , makeValidDayText
   , makeValidDay
-  , makeValidNameM
   , makeValidName
   , makeTitle
   , makeBody
@@ -99,13 +98,6 @@ makeValidDayText date =
   case validDayText date of
     Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
     Success date' -> return date'
-
-makeValidNameM :: Maybe Text -> App (Maybe Name)
-makeValidNameM Nothing = return Nothing
-makeValidNameM (Just name) =
-  case makeName name of
-    Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-    Success name' -> return $ Just name'
 
 makeValidName :: Text -> App Name
 makeValidName name =

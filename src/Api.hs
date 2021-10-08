@@ -18,12 +18,9 @@ import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
 import RIO (Text, Int64, throwIO, liftIO)
 import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
-import qualified Database.Persist as P
-import Database.Esqueleto.Experimental
- (Entity(..), fromSqlKey)
+import Database.Esqueleto.Experimental (Entity(..), Key, fromSqlKey)
 import App (App)
-import Model
-   (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..), makePassword)
+import Model (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..), makePassword)
 import Email (sendActivationLink)
 import JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
 import UserValidation (parseUser)
@@ -63,7 +60,7 @@ type CreateNote =
      "note"
   :> ReqBody '[JSON] NoteInput
   :> Header "Authorization" Token
-  :> Post '[JSON] (P.Key Note)
+  :> Post '[JSON] (Key Note)
 type GetNotesByName =
      "notes"
   :> Capture "username" Text
@@ -116,7 +113,7 @@ loginUser UserLogin {..} = do
 -- -H 'Authorization: Bearer "<your token>"' \
 -- -H 'Content-Type: application/json' \
 -- -d '{ "noteAuthor" : "<your userName>", "noteTitle" : "some title", "noteBody": "do something good"}'
-createNote :: NoteInput -> Maybe Token -> App (P.Key Note)
+createNote :: NoteInput -> Maybe Token -> App (Key Note)
 createNote note@NoteInput{..} mToken = do
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
   notesRequest (insertNote note) (Just existingName) CreateNoteRequest scope
