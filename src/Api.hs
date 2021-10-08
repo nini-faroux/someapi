@@ -159,7 +159,7 @@ getNotes mStartDate mEndDate mToken = do
 getNotesByName :: Text -> Maybe Text -> Maybe Text -> Maybe Token -> App [Entity Note]
 getNotesByName noteAuthor mStart mEnd mToken = do
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
-  notesRequest (query existingName mStart mEnd) (Just existingName) GetNotesByNameRequest scope
+  notesRequest (query existingName mStart mEnd) (Just existingName) GetNoteRequest scope
   where
     query author Nothing Nothing = getNotesBetweenDates (Just author) Nothing Nothing
     query author js@(Just _startDate) Nothing = getNotesBetweenDates (Just author) js Nothing
@@ -183,12 +183,13 @@ activateUserAccount formData = do
 notesRequest :: App a -> Maybe Name -> NoteRequest -> Scope -> App a
 notesRequest query mName requestType Scope {..}
   | not protectedAccess = throwIO err403 { errBody = "Not Authorised" }
-  | requestType == GetNoteRequest || requestType == GetNotesByNameRequest || requestType == GetNotesByDayRequest = query
+  | requestType == GetNoteRequest = query
   | matchingName mName tokenUserName = query
-  | otherwise = throwIO err403 { errBody = "Not Authorised - use your own user name to create new notes" }
+  | otherwise = throwIO err403 { errBody = errorMessage }
   where
     matchingName Nothing _tokenName = False
     matchingName (Just userName) tokenUserName' = userName == tokenUserName'
+    errorMessage = "Not Authorised - use your own user name to create new notes"
 
 getNotesBetweenDates :: Maybe Name -> Maybe Text -> Maybe Text -> App [Entity Note]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes

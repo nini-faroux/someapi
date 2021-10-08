@@ -62,7 +62,7 @@ instance Show DayField where
     | day >= 0 && day < 10 = "0" ++ show day
     | otherwise = show day
 
-data NoteRequest = CreateNoteRequest | GetNoteRequest | GetNotesByNameRequest | GetNotesByDayRequest deriving Eq
+data NoteRequest = CreateNoteRequest | GetNoteRequest deriving Eq
 
 data DayInput =
   DayInput {
