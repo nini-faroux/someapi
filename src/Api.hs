@@ -29,7 +29,7 @@ import JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (Name)
-import NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidNameM, makeValidName)
+import NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidName)
 import Authenticate (makeAuthToken', getAuth, checkPassword', checkUserCredentials, checkNameExists)
 import qualified Query
 
@@ -162,7 +162,7 @@ getNotes mStartDate mEndDate mToken = do
 getNotesByName :: Text -> Maybe Text -> Maybe Text -> Maybe Token -> App [Entity Note]
 getNotesByName noteAuthor mStart mEnd mToken = do
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
-  notesRequest (query noteAuthor mStart mEnd) (Just existingName) GetNotesByNameRequest scope
+  notesRequest (query existingName mStart mEnd) (Just existingName) GetNotesByNameRequest scope
   where
     query author Nothing Nothing = getNotesBetweenDates (Just author) Nothing Nothing
     query author js@(Just _startDate) Nothing = getNotesBetweenDates (Just author) js Nothing
@@ -193,32 +193,29 @@ notesRequest query mName requestType Scope {..}
     matchingName Nothing _tokenName = False
     matchingName (Just userName) tokenUserName' = userName == tokenUserName'
 
-getNotesBetweenDates :: Maybe Text -> Maybe Text -> Maybe Text -> App [Entity Note]
+getNotesBetweenDates :: Maybe Name -> Maybe Text -> Maybe Text -> App [Entity Note]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes
-getNotesBetweenDates (Just author) Nothing Nothing = do
-  name <- makeValidName author
-  Query.getNotesByName name
+getNotesBetweenDates (Just author) Nothing Nothing = Query.getNotesByName author
 getNotesBetweenDates mName (Just startDate) (Just endDate) = do
-  (mname, start, end) <- getStartEndAndName mName startDate endDate makeValidDay
-  makeQuery mname start end
+  (start, end) <- getStartAndEndParams startDate endDate makeValidDay
+  makeQuery mName start end
 getNotesBetweenDates mName (Just startDate) Nothing = do
   time <- liftIO getCurrentTime
   let (year, month, day) = toGregorian $ utctDay time
   end <- makeValidDayText (DayInput year month day)
-  (mname, start, end') <- getStartEndAndName mName startDate end (const $ pure end)
-  makeQuery mname start end'
+  (start, end') <- getStartAndEndParams startDate end (const $ pure end)
+  makeQuery mName start end'
 getNotesBetweenDates mName Nothing (Just endDate) = do
   mStart <- Query.getFirstDay
   case mStart of
     Nothing -> Query.getNotes
     Just start -> do
       end <- makeValidDay endDate
-      mname <- makeValidNameM mName
-      makeQuery mname start end
+      makeQuery mName start end
 
-getStartEndAndName :: Maybe Text -> Text -> Text -> (Text -> App Text) -> App (Maybe Name, Text, Text)
-getStartEndAndName mName start end makeDay =
-  makeValidDay start >>= \s -> makeDay end >>= \e -> makeValidNameM mName >>= \mn -> return (mn, s, e)
+getStartAndEndParams :: Text -> Text -> (Text -> App Text) -> App (Text, Text)
+getStartAndEndParams start end makeDay =
+  makeValidDay start >>= \s -> makeDay end >>= \e -> return (s, e)
 
 makeQuery :: Maybe Name -> Text -> Text -> App [Entity Note]
 makeQuery mName start end
