@@ -122,4 +122,7 @@ initialEnv = do
   return $ Env { connectionPool = pool, port = 8000 }
 
 connectionString :: ConnectionString
-connectionString = "host=127.0.0.1 port=5432 user=ninifaroux dbname=someapi password=password"
+connectionString = "host=postgres-server port=5432 user=postgres dbname=someapi password=password" 
+
+-- connectionString :: ConnectionString
+-- connectionString = "host=127.0.0.1 port=5432 user=ninifaroux dbname=someapi password=password"
