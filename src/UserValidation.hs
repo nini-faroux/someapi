@@ -14,9 +14,9 @@ parseUser :: UserWithPassword -> App User
 parseUser uwp@UserWithPassword {..} = do
   emailExists <- existsError email makeEmail ExistingEmail Query.getUserByEmail
   nameExists <- existsError name makeName ExistingUserName Query.getUserByName
-  let emailExistsError = otherError emailExists
-  let nameExistsError = otherError nameExists
-  let passwordError = otherError $ validPassword password
+  let emailExistsError = getError emailExists
+      nameExistsError = getError nameExists
+      passwordError = getError $ validPassword password
   case validUser uwp of
     Success user -> if null emailExistsError && null nameExistsError && null passwordError then return user
                     else throwIO err400 { errBody = errorsToBS [emailExistsError, nameExistsError, passwordError] }
@@ -37,8 +37,8 @@ parseUser uwp@UserWithPassword {..} = do
             _user -> return $ Failure [verror]
     errorsToBS :: [[VError]] -> LB.ByteString
     errorsToBS ess = LB.fromString $ show $ concat ess
-    otherError :: Validation [VError] a -> [VError]
-    otherError valid =
+    getError :: Validation [VError] a -> [VError]
+    getError valid =
       case valid of
         Success _ -> []
         Failure err -> err
