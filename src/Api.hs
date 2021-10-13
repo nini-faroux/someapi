@@ -4,6 +4,9 @@ module Api
   ( NoteAPI
   , CreateUser
   , CreateNote
+  , GetNotes
+  , GetNotesByName
+  , LoginUser
   , noteApi
   , createUser
   , loginUser

@@ -14,6 +14,7 @@ module UserTypes
   , renderName
   , renderEmail
   , nameSample
+  , nameSample2
   , ageSample
   , emailSample
   )
@@ -95,6 +96,9 @@ validPassword pass
 -- | Export for the swagger docs and tests
 nameSample :: Name
 nameSample = Name "nini"
+
+nameSample2 :: Name
+nameSample2 = Name "laurie"
 
 ageSample :: Age
 ageSample = Age 100
