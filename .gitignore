@@ -1,3 +1,4 @@
 .stack-work/
 *~
 Config.hs
+.DS_Store
