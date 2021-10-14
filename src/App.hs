@@ -1,14 +1,27 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
-module App (App, Env(..)) where
+module App 
+  ( App
+  , Config(..)
+  , Environment(..)
+  , CommandOptions(..)
+  ) where
 
 import RIO (RIO)
 import Database.Persist.Postgresql (ConnectionPool)
 import Network.Wai.Handler.Warp (Port)
 
-type App = RIO Env
+type App = RIO Config
 
-data Env = Env
+data Config = Config
   { connectionPool :: !ConnectionPool
   , port :: !Port
+  }
+
+data Environment =
+    Local
+  | Docker
+  deriving (Eq, Show)
+
+newtype CommandOptions =
+  Options {
+    devType :: Bool
   }

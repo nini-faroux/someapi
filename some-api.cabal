@@ -72,6 +72,7 @@ library
     , monad-logger
     , monad-time
     , mtl
+    , optparse-applicative
     , password
     , password-instances
     , persistent
@@ -125,6 +126,7 @@ executable some-api-exe
     , monad-logger
     , monad-time
     , mtl
+    , optparse-applicative
     , password
     , password-instances
     , persistent
@@ -178,6 +180,7 @@ test-suite some-api-test
     , monad-logger
     , monad-time
     , mtl
+    , optparse-applicative
     , password
     , password-instances
     , persistent

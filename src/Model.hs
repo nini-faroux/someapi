@@ -17,7 +17,7 @@ module Model
   , Key(..)
   , runDB
   , makePassword
-  , initialEnv
+  , initialConfig
   , runMigrations
   ) 
   where
@@ -27,12 +27,12 @@ import RIO.Time (UTCTime)
 import qualified Database.Persist.TH as PTH
 import Database.Persist.Sql (Key, EntityField)
 import Database.Persist.Postgresql
-  (ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
+  (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt, hashPassword, mkPassword)
 import Data.Password.Instances()
-import App (App, Env(..))
+import App (App, Config(..), Environment(..))
 import Say (say)
 import UserTypes (Name, Email, Age)
 import NoteTypes (NoteTitle, NoteBody)
@@ -106,8 +106,14 @@ runDB query = do
   connPool <- asks connectionPool
   liftIO $ runSqlPool query connPool
 
-runMigrations :: IO ()
-runMigrations = do
+runMigrations :: Environment -> IO ()
+runMigrations devType =
+  case devType of
+    Local -> runMigrations' connectionStringLocal
+    Docker -> runMigrations' connectionStringDocker
+
+runMigrations' :: ConnectionString -> IO ()
+runMigrations' connectionString = do
   say "Running migrations"
   runAction connectionString $ runMigration migrateAll
   say "Migrations Finished"
@@ -116,13 +122,20 @@ runAction :: ConnectionString -> SqlPersistT (LoggingT IO) a ->  IO a
 runAction connString action = runStdoutLoggingT $ withPostgresqlConn connString $ \backend ->
   runReaderT action backend
 
-initialEnv :: IO Env
-initialEnv = do
-  pool <- runStdoutLoggingT $ createPostgresqlPool connectionString 2
-  return $ Env { connectionPool = pool, port = 8000 }
+initialConfig :: Environment -> IO Config
+initialConfig devType = do
+  pool <- makePool devType
+  return $ Config { connectionPool = pool, port = 8000 }
 
-connectionString :: ConnectionString
-connectionString = "host=postgres-server port=5432 user=postgres dbname=someapi password=password" 
+makePool :: Environment -> IO ConnectionPool
+makePool devType = case devType of
+  Local -> makePool' connectionStringLocal
+  Docker -> makePool' connectionStringDocker
+  where
+    makePool' connStr = runStdoutLoggingT $ createPostgresqlPool connStr 2
 
--- connectionString :: ConnectionString
--- connectionString = "host=127.0.0.1 port=5432 user=ninifaroux dbname=someapi password=password"
+connectionStringDocker :: ConnectionString
+connectionStringDocker = "host=postgres-server port=5432 user=postgres dbname=someapi password=password" 
+
+connectionStringLocal :: ConnectionString
+connectionStringLocal = "host=127.0.0.1 port=5432 user=ninifaroux dbname=someapi password=password"

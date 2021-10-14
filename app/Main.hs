@@ -3,14 +3,26 @@ module Main (main) where
 import Servant (serve)
 import Api (noteApi)
 import Server (hoistAppServer)
-import App (Env(..))
-import Model (runMigrations, initialEnv)
--- import Docs (writeSwaggerJSON)
+import App (Config(..), Environment(..), CommandOptions(..))
+import Model (runMigrations, initialConfig)
+import Docs (writeSwaggerJSON)
 import Network.Wai.Handler.Warp (run)
+import Options.Applicative (execParser, help, info, long, short, switch)
 
 main :: IO ()
-main = do
-  -- writeSwaggerJSON
-  Env {..} <- initialEnv
-  _ <- runMigrations
-  run port $ serve noteApi $ hoistAppServer $ Env connectionPool port
+main = execParser options >>= runApp
+  where
+    parser = Options <$> switch (short 'l' <> long "local" <> help "run app with local setup instead of docker")
+    options = info parser mempty
+
+runApp :: CommandOptions -> IO ()
+runApp options
+  | devType' = writeSwaggerJSON >> run' Local
+  | otherwise = run' Docker 
+  where devType' = devType options
+
+run' :: Environment -> IO ()
+run' devType = do
+  _ <- runMigrations devType
+  Config {..} <- initialConfig devType
+  run port $ serve noteApi $ hoistAppServer $ Config connectionPool port

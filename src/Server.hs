@@ -4,7 +4,7 @@ import Servant
 import Control.Monad.Except (ExceptT(..))
 import RIO hiding (Handler)
 import Api (NoteAPI, noteApi, createUser, loginUser, activateUserAccount, getNotes, createNote, getNotesByName)
-import App (App, Env)
+import App (App, Config)
 
 noteServer :: ServerT NoteAPI App
 noteServer =
@@ -15,7 +15,7 @@ noteServer =
   :<|> createNote
   :<|> getNotesByName
 
-hoistAppServer :: Env -> Server NoteAPI
+hoistAppServer :: Config -> Server NoteAPI
 hoistAppServer env' = hoistServer noteApi (transform env') noteServer where
-  transform :: Env -> App a -> Handler a
+  transform :: Config -> App a -> Handler a
   transform env app = Handler $ ExceptT $ try $ runRIO env app
