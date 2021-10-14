@@ -16,7 +16,6 @@ module Model
   , EntityField(..)
   , Key(..)
   , runDB
-  , makePassword
   , initialConfig
   , runMigrations
   ) 
@@ -30,7 +29,7 @@ import Database.Persist.Postgresql
   (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Password.Bcrypt (PasswordHash(..), Bcrypt, hashPassword, mkPassword)
+import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
 import App (App, Config(..), Environment(..))
 import Say (say)
@@ -97,9 +96,6 @@ instance Z.HasField "userName" User Name where
   hasField r = (\x -> r{userName=x}, userName r)
 instance Z.HasField "userEmail" User Email where
   hasField r = (\x -> r{userEmail=x}, userEmail r)
-
-makePassword :: Text -> IO (PasswordHash Bcrypt)
-makePassword = hashPassword . mkPassword
 
 runDB :: SqlPersistT IO a -> App a
 runDB query = do

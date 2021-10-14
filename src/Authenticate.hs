@@ -2,6 +2,7 @@ module Authenticate
   ( makeAuthToken'
   , checkUserCredentials
   , checkNameExists
+  , makePassword
   , checkPassword'
   , getAuth
   ) where
@@ -10,7 +11,7 @@ import Servant (errBody, err400, err401, err404)
 import RIO (Text, throwIO, decodeUtf8', liftIO)
 import RIO.Time (getCurrentTime)
 import qualified Data.ByteString.Lazy.UTF8 as LB
-import Data.Password.Bcrypt (PasswordCheck(..), PasswordHash, Bcrypt, mkPassword, checkPassword)
+import Data.Password.Bcrypt (PasswordCheck(..), PasswordHash, Bcrypt, mkPassword, checkPassword, hashPassword)
 import Database.Esqueleto.Experimental (Entity(..))
 import JWT (Token(..), Scope(..), makeAuthToken, verifyAuthToken)
 import App (App)
@@ -40,6 +41,9 @@ checkNameExists name = do
   case mUser of
     Nothing -> throwIO err404 { errBody = "User not found" }
     Just _user -> return name
+
+makePassword :: Text -> IO (PasswordHash Bcrypt)
+makePassword = hashPassword . mkPassword
 
 checkPassword' :: Text -> PasswordHash Bcrypt -> App PasswordCheck
 checkPassword' loginPassword hashPass = do

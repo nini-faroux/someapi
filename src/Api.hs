@@ -23,14 +23,14 @@ import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import Database.Esqueleto.Experimental (Entity(..), Key, fromSqlKey)
 import App (App)
-import Model (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..), makePassword)
+import Model (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..))
 import Email (sendActivationLink)
 import JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
 import UserValidation (parseUser)
 import NoteValidation (parseNote)
 import UserTypes (Name)
 import NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidName)
-import Authenticate (makeAuthToken', getAuth, checkPassword', checkUserCredentials, checkNameExists)
+import Authenticate (makeAuthToken', getAuth, makePassword, checkPassword', checkUserCredentials, checkNameExists)
 import qualified Query
 
 type NoteAPI =
