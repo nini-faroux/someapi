@@ -50,6 +50,7 @@ library
       DataKinds
       TypeOperators
       TypeApplications
+      NoImplicitPrelude
   ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -Wredundant-constraints -Wmissing-export-lists -Werror
   build-depends:
       aeson

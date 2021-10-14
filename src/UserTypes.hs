@@ -20,7 +20,7 @@ module UserTypes
   )
   where
 
-import RIO ( Generic, encodeUtf8, Text )
+import RIO
 import Data.Validation ( Validation(..) )
 import qualified Data.Text as T
 import qualified Text.Email.Validate as EV

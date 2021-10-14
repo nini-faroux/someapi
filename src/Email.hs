@@ -2,10 +2,10 @@
 
 module Email (sendActivationLink) where
 
+import RIO hiding (to)
 import Text.Ginger (
   Template, SourcePos, GVal, ToGVal, IncludeResolver, toGVal, makeContextHtml, runGinger, parseGinger)
 import Text.Ginger.Html (htmlSource)
-import RIO (Text, HashMap, Identity, Hashable, decodeUtf8', runIdentity)
 import RIO.Time (getCurrentTime)
 import qualified RIO.Text.Lazy as TL
 import qualified RIO.HashMap as HashMap

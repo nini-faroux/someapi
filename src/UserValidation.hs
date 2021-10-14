@@ -1,7 +1,7 @@
 module UserValidation (parseUser) where
 
+import RIO
 import Servant (errBody, err400)
-import RIO (Text, throwIO)
 import Data.Validation (Validation(..))
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Validation (VError(..))

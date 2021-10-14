@@ -5,7 +5,7 @@ module App
   , CommandOptions(..)
   ) where
 
-import RIO (RIO)
+import RIO
 import Database.Persist.Postgresql (ConnectionPool)
 import Network.Wai.Handler.Warp (Port)
 
@@ -23,5 +23,5 @@ data Environment =
 
 newtype CommandOptions =
   Options {
-    devType :: Bool
+    envType :: Bool
   }

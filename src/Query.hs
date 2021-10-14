@@ -16,7 +16,7 @@ module Query
   , updateUserActivatedValue
   ) where
 
-import RIO (Text)
+import RIO hiding ((^.), on)
 import qualified Database.Persist as P
 import Database.Esqueleto.Experimental
  (Entity(..), InnerJoin(..),

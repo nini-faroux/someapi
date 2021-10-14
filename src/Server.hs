@@ -1,8 +1,8 @@
 module Server (hoistAppServer, noteServer) where
 
+import RIO hiding (Handler)
 import Servant
 import Control.Monad.Except (ExceptT(..))
-import RIO hiding (Handler)
 import Api (NoteAPI, noteApi, createUser, loginUser, activateUserAccount, getNotes, createNote, getNotesByName)
 import App (App, Config)
 

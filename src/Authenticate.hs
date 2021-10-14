@@ -7,8 +7,8 @@ module Authenticate
   , getAuth
   ) where
 
+import RIO
 import Servant (errBody, err400, err401, err404)
-import RIO (Text, throwIO, decodeUtf8', liftIO)
 import RIO.Time (getCurrentTime)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Password.Bcrypt (PasswordCheck(..), PasswordHash, Bcrypt, mkPassword, checkPassword, hashPassword)

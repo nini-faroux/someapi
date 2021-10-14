@@ -1,6 +1,6 @@
 module NoteValidation (parseNote) where
 
-import RIO (throwIO, liftIO)
+import RIO
 import RIO.Time (UTCTime, getCurrentTime, toGregorian, utctDay)
 import Servant (errBody, err400)
 import qualified Data.ByteString.Lazy.UTF8 as LB

@@ -17,12 +17,12 @@ main = execParser options >>= runApp
 
 runApp :: CommandOptions -> IO ()
 runApp options
-  | devType' = writeSwaggerJSON >> run' Local
+  | isLocalEnv = writeSwaggerJSON >> run' Local
   | otherwise = run' Docker 
-  where devType' = devType options
+  where isLocalEnv = envType options
 
 run' :: Environment -> IO ()
-run' devType = do
-  _ <- runMigrations devType
-  Config {..} <- initialConfig devType
+run' envType = do
+  _ <- runMigrations envType
+  Config {..} <- initialConfig envType
   run port $ serve noteApi $ hoistAppServer $ Config connectionPool port

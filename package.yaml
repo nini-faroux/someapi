@@ -71,6 +71,8 @@ library:
     - DataKinds
     - TypeOperators
     - TypeApplications
+    - NoImplicitPrelude
+
   ghc-options:
     - -Wall
     - -Wcompat

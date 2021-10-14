@@ -21,7 +21,7 @@ module Model
   ) 
   where
 
-import RIO (Text, Generic, runReaderT, asks, liftIO)
+import RIO
 import RIO.Time (UTCTime)
 import qualified Database.Persist.TH as PTH
 import Database.Persist.Sql (Key, EntityField)

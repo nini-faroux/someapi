@@ -22,13 +22,14 @@ import Data.Swagger
   , title
   , url
   )
+
+import RIO
 import Servant
 import Servant.Swagger
 import Servant.Multipart (MultipartForm, MultipartData, Mem)
-import RIO.Text (Text)
 import RIO.Time (UTCTime(UTCTime), TimeOfDay(TimeOfDay), fromGregorian, timeOfDayToTime)
 import Data.Fixed (Pico)
-import Lens.Micro (mapped, (&), (?~), (.~))
+import Lens.Micro (mapped, (?~))
 import Database.Persist.Sql (Entity(..))
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)

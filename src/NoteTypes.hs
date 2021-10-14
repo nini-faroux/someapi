@@ -25,8 +25,8 @@ module NoteTypes
   , daySample
   ) where
 
+import RIO
 import Servant (errBody, err400)
-import RIO (Text, Generic, isNothing, readMaybe, fromMaybe, throwIO)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation(..))
 import qualified Data.Text as T

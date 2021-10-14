@@ -15,16 +15,15 @@ module JWT
   , verifyUserToken
   ) where
 
+import RIO
 import Web.Libjwt
 import Servant (errBody, err400)
-import RIO (Text, ByteString, MonadThrow, Generic, liftIO, encodeUtf8, displayException, throwIO)
 import RIO.Time (UTCTime, NominalDiffTime)
 import qualified Web.Libjwt as LJ
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import qualified Data.Text as T
 import Servant.Auth.Server (def)
 import Control.Arrow (left)
-import Control.Exception (catch)
 import Data.Either.Validation (validationToEither)
 import Control.Monad.Time (MonadTime)
 import Web.HttpApiData (FromHttpApiData, ToHttpApiData)

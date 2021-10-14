@@ -1,5 +1,7 @@
 module Validation (VError(..)) where
 
+import RIO
+
 data VError =
     ExistingEmail
   | ExistingUserName

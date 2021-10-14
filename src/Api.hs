@@ -16,9 +16,9 @@ module Api
   , getNotesByName
   ) where
 
+import RIO
 import Servant
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
-import RIO (Text, Int64, throwIO, liftIO)
 import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import Database.Esqueleto.Experimental (Entity(..), Key, fromSqlKey)
