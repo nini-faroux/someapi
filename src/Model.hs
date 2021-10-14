@@ -31,7 +31,7 @@ import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
-import App (App, Config(..), Environment(..))
+import App (App, Config(..), Environment(..), makeConfig)
 import Say (say)
 import UserTypes (Name, Email, Age)
 import NoteTypes (NoteTitle, NoteBody)
@@ -119,9 +119,7 @@ runAction connString action = runStdoutLoggingT $ withPostgresqlConn connString 
   runReaderT action backend
 
 initialConfig :: Environment -> IO Config
-initialConfig devType = do
-  pool <- makePool devType
-  return $ Config { connectionPool = pool, port = 8000 }
+initialConfig = makeConfig <=< makePool
 
 makePool :: Environment -> IO ConnectionPool
 makePool devType = case devType of

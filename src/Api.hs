@@ -102,6 +102,7 @@ createUser uwp@UserWithPassword {..} = do
 -- -d '{ "loginName": "<userName>", "loginPassword": "password"}'
 loginUser :: UserLogin -> App Token
 loginUser UserLogin {..} = do
+  logInfo $ "Attempting to authenticate user: " <> displayShow loginName
   name <- makeValidName loginName
   existingName <- checkNameExists name
   hashPass <- getAuth existingName

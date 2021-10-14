@@ -105,6 +105,7 @@ executable some-api-exe
       app
   default-extensions:
       RecordWildCards
+      OverloadedStrings
   ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -Wredundant-constraints -Wmissing-export-lists -Werror -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson

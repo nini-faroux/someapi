@@ -89,6 +89,7 @@ executables:
     source-dirs:         app
     default-extensions:
     - RecordWildCards
+    - OverloadedStrings
     ghc-options:
     - -Wall
     - -Wcompat

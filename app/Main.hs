@@ -25,4 +25,4 @@ run' :: Environment -> IO ()
 run' envType = do
   _ <- runMigrations envType
   Config {..} <- initialConfig envType
-  run port $ serve noteApi $ hoistAppServer $ Config connectionPool port
+  run port $ serve noteApi $ hoistAppServer $ Config connectionPool port logFunc
