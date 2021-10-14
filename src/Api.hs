@@ -122,7 +122,7 @@ createNote note@NoteInput{..} mToken = do
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
   notesRequest (insertNote note) (Just existingName) CreateNoteRequest scope
   where
-    insertNote noteInput = parseNote noteInput >>= \validNote -> Query.insertNote validNote
+    insertNote = Query.insertNote <=< parseNote
 
 -- | Endpoint for fetching fetching notes, requires an active auth token for access
 -- * If no query parameters are specified 
