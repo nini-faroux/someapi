@@ -28,6 +28,7 @@ import JWT (Scope(..), Token(..), makeAuthToken)
 main :: IO ()
 main = hspec apiTests
 
+-- | Current tests assume starting with fresh database
 apiTests :: Spec
 apiTests =
   around withUserApp $ do

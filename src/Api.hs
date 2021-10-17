@@ -119,6 +119,7 @@ loginUser UserLogin {..} = do
 -- -d '{ "noteAuthor" : "<your userName>", "noteTitle" : "some title", "noteBody": "do something good"}'
 createNote :: NoteInput -> Maybe Token -> App (Key Note)
 createNote note@NoteInput{..} mToken = do
+  logInfo $ "Attempting to create new note by: " <> displayShow noteAuthor
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
   notesRequest (insertNote note) (Just existingName) CreateNoteRequest scope
   where
@@ -187,13 +188,15 @@ activateUserAccount formData = do
 notesRequest :: App a -> Maybe Name -> NoteRequest -> Scope -> App a
 notesRequest query mName requestType Scope {..}
   | not protectedAccess = throwIO err403 { errBody = "Not Authorised" }
-  | requestType == GetNoteRequest = query
-  | matchingName mName tokenUserName = query
+  | requestType == GetNoteRequest = logGetRequest >> query
+  | matchingName mName tokenUserName = logPostRequest >> query
   | otherwise = throwIO err403 { errBody = errorMessage }
   where
     matchingName Nothing _tokenName = False
     matchingName (Just userName) tokenUserName' = userName == tokenUserName'
     errorMessage = "Not Authorised - use your own user name to create new notes"
+    logGetRequest = logInfo "Retrieving notes"
+    logPostRequest = logInfo "Creating note"
 
 getNotesBetweenDates :: Maybe Name -> Maybe Text -> Maybe Text -> App [Entity Note]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes
