@@ -1,14 +1,16 @@
-module UserValidation (parseUser) where
+module Parse.UserValidation
+  (parseUser
+  ) where
 
 import RIO
 import Servant (errBody, err400)
 import Data.Validation (Validation(..))
 import qualified Data.ByteString.Lazy.UTF8 as LB
-import Validation (VError(..))
-import Model (UserWithPassword(..), User(..))
+import Parse.Validation (VError(..))
+import Parse.UserTypes (makeName, makeAge, makeEmail, validActivation, validPassword)
+import Web.Model (UserWithPassword(..), User(..))
+import qualified Web.Query as Query
 import App (App)
-import UserTypes (makeName, makeAge, makeEmail, validActivation, validPassword)
-import qualified Query
 
 parseUser :: UserWithPassword -> App User
 parseUser uwp@UserWithPassword {..} = do

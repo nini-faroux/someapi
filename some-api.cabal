@@ -27,19 +27,19 @@ library
   exposed-modules:
       Api
       App
-      Authenticate
       Config
-      Docs
-      Email
-      JWT
-      Model
-      NoteTypes
-      NoteValidation
-      Query
-      Server
-      UserTypes
-      UserValidation
-      Validation
+      Docs.Docs
+      Parse.Authenticate
+      Parse.NoteTypes
+      Parse.NoteValidation
+      Parse.UserTypes
+      Parse.UserValidation
+      Parse.Validation
+      Web.Email
+      Web.JWT
+      Web.Model
+      Web.Query
+      Web.Server
   other-modules:
       Paths_some_api
   hs-source-dirs:

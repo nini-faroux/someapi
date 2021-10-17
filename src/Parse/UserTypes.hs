@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module UserTypes 
+module Parse.UserTypes 
   ( Age
   , Name
   , Email
@@ -27,7 +27,7 @@ import qualified Text.Email.Validate as EV
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Database.Persist.TH as PTH
 import Libjwt.Classes ( JwtRep(..) )
-import Validation (VError(..))
+import Parse.Validation (VError(..))
 
 newtype Name = Name Text deriving (Eq, Show, Read, Generic)
 newtype Age = Age Int deriving (Eq, Show, Read, Generic)

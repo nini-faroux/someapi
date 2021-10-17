@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module NoteTypes 
+module Parse.NoteTypes 
   ( NoteTitle
   , NoteBody
   , Day
@@ -33,8 +33,8 @@ import qualified Data.Text as T
 import qualified Database.Persist.TH as PTH
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Char (isDigit)
-import UserTypes (Name, makeName)
-import Validation (VError(..))
+import Parse.UserTypes (Name, makeName)
+import Parse.Validation (VError(..))
 import App (App)
 
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)

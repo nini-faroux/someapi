@@ -1,4 +1,4 @@
-module Authenticate 
+module Parse.Authenticate 
   ( makeAuthToken'
   , checkUserCredentials
   , checkNameExists
@@ -13,12 +13,12 @@ import RIO.Time (getCurrentTime)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Password.Bcrypt (PasswordCheck(..), PasswordHash, Bcrypt, mkPassword, checkPassword, hashPassword)
 import Database.Esqueleto.Experimental (Entity(..))
-import JWT (Token(..), Scope(..), makeAuthToken, verifyAuthToken)
+import Web.JWT (Token(..), Scope(..), makeAuthToken, verifyAuthToken)
 import App (App)
-import UserTypes (Name)
-import NoteTypes (makeValidName)
-import Model (Auth(..))
-import qualified Query
+import Parse.UserTypes (Name)
+import Parse.NoteTypes (makeValidName)
+import Web.Model (Auth(..))
+import qualified Web.Query as Query
 
 makeAuthToken' :: Name -> App Token
 makeAuthToken' existingName = do

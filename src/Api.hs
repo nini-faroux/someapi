@@ -23,15 +23,15 @@ import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import Database.Esqueleto.Experimental (Entity(..), Key, fromSqlKey)
 import App (App)
-import Model (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..))
-import Email (sendActivationLink)
-import JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
-import UserValidation (parseUser)
-import NoteValidation (parseNote)
-import UserTypes (Name)
-import NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidName)
-import Authenticate (makeAuthToken', getAuth, makePassword, checkPassword', checkUserCredentials, checkNameExists)
-import qualified Query
+import Web.Model (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..))
+import Web.Email (sendActivationLink)
+import Web.JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
+import Parse.UserValidation (parseUser)
+import Parse.NoteValidation (parseNote)
+import Parse.UserTypes (Name)
+import Parse.NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidName)
+import Parse.Authenticate (makeAuthToken', getAuth, makePassword, checkPassword', checkUserCredentials, checkNameExists)
+import qualified Web.Query as Query
 
 type NoteAPI =
        CreateUser
@@ -41,6 +41,7 @@ type NoteAPI =
   :<|> CreateNote
   :<|> GetNotesByName
 
+-- | The API Endpoints
 type CreateUser =
      "user"
   :> ReqBody '[JSON] UserWithPassword
@@ -75,7 +76,7 @@ type GetNotesByName =
 noteApi :: Proxy NoteAPI
 noteApi = Proxy
 
--- | Endpoint for creating a new user
+-- | Endpoint handler for creating a new user
 -- * If the user input is valid
 -- then the user will be created and an activation link sent to the given email
 -- Example request:
@@ -91,7 +92,7 @@ createUser uwp@UserWithPassword {..} = do
     liftIO $ sendActivationLink user
     return $ fromSqlKey newUserId
 
--- | Endpoint for user authentication
+-- | Endpoint handler for user authentication
 -- * If the user is activated and supplies valid credentials
 -- then the user will be sent an authentication JWT token
 -- * The user will then be able to use this token to
@@ -109,7 +110,7 @@ loginUser UserLogin {..} = do
   _passCheck <- checkPassword' loginPassword hashPass
   makeAuthToken' existingName
 
--- | Endpoint for creating new notes, requires an active auth token
+-- | Endpoint handler for creating new notes, requires an active auth token
 -- The 'noteAuthor' field in the request's body must be the same as your own user name (the one you are logged in with)
 -- Otherwise the request will be rejected
 -- Example request:
@@ -125,7 +126,7 @@ createNote note@NoteInput{..} mToken = do
   where
     insertNote = Query.insertNote <=< parseNote
 
--- | Endpoint for fetching fetching notes, requires an active auth token for access
+-- | Endpoint handler for fetching fetching notes, requires an active auth token for access
 -- * If no query parameters are specified 
 -- then it will return all the notes
 -- Example request:
@@ -151,7 +152,7 @@ getNotes mStartDate mEndDate mToken = do
     query Nothing je@(Just _endDate) = getNotesBetweenDates Nothing Nothing je
     query js@(Just _startDate) je@(Just _endDate) = getNotesBetweenDates Nothing js je
 
--- | Endpoint for fetching notes created by a specific author
+-- | Endpoint handler for fetching notes created by a specific author
 -- * If no query parameters are specified
 -- then all the notes from that author will be returned
 -- Example: /notes/<authorName>
@@ -171,7 +172,7 @@ getNotesByName noteAuthor mStart mEnd mToken = do
     query author Nothing je@(Just _endDate) = getNotesBetweenDates (Just author) Nothing je
     query author js@(Just _startDate) je@(Just _endDate) = getNotesBetweenDates (Just author) js je
 
--- | Endpoint for when the user clicks on the email activation link
+-- | Endpoint handler for when the user clicks on the email activation link
 -- The user is activated allowing them to authenticate
 activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
 activateUserAccount formData = do

@@ -1,4 +1,6 @@
-module Validation (VError(..)) where
+module Parse.Validation
+  (VError(..)
+  ) where
 
 import RIO
 

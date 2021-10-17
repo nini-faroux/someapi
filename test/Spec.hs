@@ -17,13 +17,13 @@ import Data.String (IsString)
 import Servant
 import Servant.Client
 import Api
-import Server (noteServer, hoistAppServer)
-import Model
 import App
-import UserTypes (nameSample, nameSample2, ageSample, emailSample)
-import NoteTypes (DayInput(..), validDay, validDayText)
+import Web.Server (noteServer, hoistAppServer)
+import Web.Model
+import Web.JWT (Scope(..), Token(..), makeAuthToken)
+import Parse.UserTypes (nameSample, nameSample2, ageSample, emailSample)
+import Parse.NoteTypes (DayInput(..), validDay, validDayText)
 import Data.Validation
-import JWT (Scope(..), Token(..), makeAuthToken)
 
 main :: IO ()
 main = hspec apiTests
@@ -277,8 +277,9 @@ withUserApp = testWithApplication noteApp
 noteApp :: IO Application
 noteApp = serve noteApi <$> noteServer'
 
+-- | Hardcode to 'Local' environment for now
 noteServer' :: IO (Server NoteAPI)
-noteServer' = initialEnv >>= \env -> pure $ hoistAppServer env 
+noteServer' = initialConfig Local >>= \env -> pure $ hoistAppServer env 
 
 userWPSample1 :: UserWithPassword
 userWPSample1 = UserWithPassword "nini" 100 "nini@mail.com" "password"

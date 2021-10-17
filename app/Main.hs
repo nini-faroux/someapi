@@ -2,10 +2,10 @@ module Main (main) where
 
 import Servant (serve)
 import Api (noteApi)
-import Server (hoistAppServer)
 import App (Config(..), Environment(..), CommandOptions(..))
-import Model (runMigrations, initialConfig)
-import Docs (writeSwaggerJSON)
+import Web.Server (hoistAppServer)
+import Web.Model (runMigrations, initialConfig)
+import Docs.Docs (writeSwaggerJSON)
 import Network.Wai.Handler.Warp (run)
 import Options.Applicative (execParser, help, info, long, short, switch)
 

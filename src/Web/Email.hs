@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
-module Email (sendActivationLink) where
+module Web.Email (sendActivationLink) where
 
 import RIO hiding (to)
 import Text.Ginger (
@@ -11,10 +11,10 @@ import qualified RIO.Text.Lazy as TL
 import qualified RIO.HashMap as HashMap
 import Network.Mail.SMTP hiding (htmlPart)
 import Network.Mail.Mime (htmlPart, plainPart)
-import Model (User)
 import Config (googleMail, googleMail', googlePass)
-import JWT (makeUserToken)
-import UserTypes (renderEmail, renderName)
+import Web.Model (User)
+import Web.JWT (makeUserToken)
+import Parse.UserTypes (renderEmail, renderName)
 
 sendActivationLink :: User -> IO ()
 sendActivationLink user = do

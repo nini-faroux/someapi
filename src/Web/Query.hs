@@ -1,4 +1,4 @@
-module Query
+module Web.Query
   ( getAuth
   , insertAuth
   , getNotes
@@ -22,10 +22,10 @@ import Database.Esqueleto.Experimental
  (Entity(..), InnerJoin(..),
   select, from, on, table, val, where_, insert, val, min_, unValue,
   (==.), (>=.), (<=.), (^.), (:&)(..))
-import Model (User(..), Note(..), EntityField(..), Auth(..), runDB)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
+import Web.Model (User(..), Note(..), EntityField(..), Auth(..), runDB)
+import Parse.UserTypes (Name, Email)
 import App (App)
-import UserTypes (Name, Email)
 
 getAuth :: Name -> App [Entity Auth]
 getAuth name =

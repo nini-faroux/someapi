@@ -6,7 +6,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module JWT 
+module Web.JWT 
   ( Scope(..)
   , Token(..)
   , makeAuthToken
@@ -28,9 +28,9 @@ import Data.Either.Validation (validationToEither)
 import Control.Monad.Time (MonadTime)
 import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
 import Data.Aeson (FromJSON, ToJSON)
-import Model (User(..))
+import Web.Model (User(..))
+import Parse.UserTypes (Name, Age, Email)
 import Config (hmac512)
-import UserTypes (Name, Age, Email)
 import App (App)
 
 -- Type for the private claims of the JWT token

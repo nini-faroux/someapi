@@ -1,15 +1,17 @@
-module NoteValidation (parseNote) where
+module Parse.NoteValidation 
+  (parseNote
+  ) where
 
 import RIO
 import RIO.Time (UTCTime, getCurrentTime, toGregorian, utctDay)
 import Servant (errBody, err400)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation(..))
-import Model (NoteInput(..), Note(..))
-import Validation (VError(..))
+import Web.Model (NoteInput(..), Note(..))
+import Parse.Validation (VError(..))
 import App (App)
-import NoteTypes (DayInput(..), makeBody, makeTitle, validDayText)
-import qualified UserTypes
+import Parse.NoteTypes (DayInput(..), makeBody, makeTitle, validDayText)
+import qualified Parse.UserTypes as UserTypes
 
 -- | Parses the note into a valid form
 -- or returns the errors encountered

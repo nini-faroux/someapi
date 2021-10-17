@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Docs (writeSwaggerJSON) where
+module Docs.Docs
+  (writeSwaggerJSON
+  ) where
 
 import Data.Swagger 
   ( ToSchema(..)
@@ -34,11 +36,12 @@ import Database.Persist.Sql (Entity(..))
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Aeson (toJSON)
-import Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), Key(..), Note(..))
-import JWT (Token(..))
 import Api (noteApi)
-import UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
-import NoteTypes (NoteTitle, NoteBody, Day, DayField, Month, Year, DayInput(..), noteTitleSample, noteBodySample, daySample)
+import Web.Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), Key(..), Note(..))
+import Web.JWT (Token(..))
+import Parse.UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
+import Parse.NoteTypes
+  (NoteTitle, NoteBody, Day, DayField, Month, Year, DayInput(..), noteTitleSample, noteBodySample, daySample)
 
 writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)

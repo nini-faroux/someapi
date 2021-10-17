@@ -6,7 +6,7 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 
-module Model 
+module Web.Model 
   ( User(..)
   , UserWithPassword(..)
   , UserLogin(..)
@@ -33,8 +33,8 @@ import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
 import App (App, Config(..), Environment(..), makeConfig)
 import Say (say)
-import UserTypes (Name, Email, Age)
-import NoteTypes (NoteTitle, NoteBody)
+import Parse.UserTypes (Name, Email, Age)
+import Parse.NoteTypes (NoteTitle, NoteBody)
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
