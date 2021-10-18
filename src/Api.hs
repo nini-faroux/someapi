@@ -126,7 +126,7 @@ createNote note@NoteInput{..} mToken = do
   where
     insertNote = Query.insertNote <=< parseNote
 
--- | Endpoint handler for fetching fetching notes, requires an active auth token for access
+-- | Endpoint handler for fetching notes, requires an active auth token for access
 -- * If no query parameters are specified 
 -- then it will return all the notes
 -- Example request:

@@ -24,3 +24,9 @@ jobs:
         with:
           push: true
           tags: ninifaroux/someapi:latest
+          HMAC_SECRET: ${{ secrets.hmac_secret }}
+          GOOGLE_MAIL: ${{ secrets.google_mail }}
+          GOOGLE_PASS: ${{ secrets.google_pass }}
+          POSTGRES_USER: ${{ secrets.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+          POSTGRES_DB: ${{ secrets.postgres_db }}

@@ -23,7 +23,7 @@ import qualified Web.Query as Query
 makeAuthToken' :: Name -> App Token
 makeAuthToken' existingName = do
   now <- liftIO getCurrentTime
-  let token = makeAuthToken (Scope { protectedAccess = True, tokenUserName = existingName }) now
+  token <- liftIO $ makeAuthToken (Scope { protectedAccess = True, tokenUserName = existingName }) now
   case decodeUtf8' token of
     Left err -> throwIO err400 { errBody = LB.fromString $ show err }
     Right token' -> return $ Token token'

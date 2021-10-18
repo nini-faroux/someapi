@@ -21,6 +21,7 @@ import Servant (errBody, err400)
 import RIO.Time (UTCTime, NominalDiffTime)
 import qualified Web.Libjwt as LJ
 import qualified Data.ByteString.Lazy.UTF8 as LB
+import qualified Data.ByteString.Char8 as LC
 import qualified Data.Text as T
 import Servant.Auth.Server (def)
 import Control.Arrow (left)
@@ -28,9 +29,9 @@ import Data.Either.Validation (validationToEither)
 import Control.Monad.Time (MonadTime)
 import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
 import Data.Aeson (FromJSON, ToJSON)
+import System.Environment (getEnv)
 import Web.Model (User(..))
 import Parse.UserTypes (Name, Age, Email)
-import Config (hmac512)
 import App (App)
 
 -- Type for the private claims of the JWT token
@@ -76,7 +77,7 @@ verifyAuthToken (Just (Token token)) = do
           | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
     hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
-makeUserToken :: User -> UTCTime -> ByteString
+makeUserToken :: User -> UTCTime -> IO ByteString
 makeUserToken User {..} = makeToken claims 7200
   where
     claims = ( #userName ->> userName
@@ -85,16 +86,18 @@ makeUserToken User {..} = makeToken claims 7200
              , #userActivated ->> userActivated
              )
 
-makeAuthToken :: Scope -> UTCTime -> ByteString
+makeAuthToken :: Scope -> UTCTime -> IO ByteString
 makeAuthToken Scope {..} = makeToken claims 900
   where claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
 
 makeToken :: (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>
-  a -> NominalDiffTime -> UTCTime -> ByteString
-makeToken privateClaims' seconds = getToken . sign hmac512 <$> mkPayload
+  a -> NominalDiffTime -> UTCTime -> IO ByteString
+makeToken privateClaims' seconds currTime = do
+  hmac512' <- hmac512
+  return . getToken $ sign hmac512' $ makePayload currTime
   where
-    mkPayload currentTime =
-      let now = fromUTC currentTime
+    makePayload currTime' =
+      let now = fromUTC currTime'
       in def
         { iss = Iss (Just "someapi")
         , aud = Aud ["someapi"]
@@ -102,6 +105,11 @@ makeToken privateClaims' seconds = getToken . sign hmac512 <$> mkPayload
         , LJ.exp = Exp (Just $ now `plusSeconds` seconds)
         , privateClaims = toPrivateClaims privateClaims'
         }
+
+hmac512 :: IO (Algorithm Secret)
+hmac512 = do
+  secret <- getEnv "HMAC_SECRET"
+  return $ HMAC512 $ MkSecret $ LC.pack secret
 
 decodeAndValidateUser :: ByteString -> IO (Either String User)
 decodeAndValidateUser = decodeAndValidateFull decodeAndValidateUser'
@@ -127,7 +135,10 @@ decodeAndValidateFull decode token =
   onError (e :: SomeDecodeException) =
     return $ Left $ "Cannot decode token " ++ displayException e
 
-decodeAndValidate :: (Decode (PrivateClaims a b), MonadTime m, MonadThrow m) => 
+decodeAndValidate :: (Decode (PrivateClaims a b), MonadTime m, MonadThrow m, MonadIO m) => 
   ByteString -> m (ValidationNEL ValidationFailure (Validated (Jwt a b)))
-decodeAndValidate = jwtFromByteString settings mempty hmac512
-  where settings = Settings { leeway = 5, appName = Just "someapi" }
+decodeAndValidate token = do
+  hmac512' <- liftIO hmac512
+  jwtFromByteString settings mempty hmac512' token
+  where
+    settings = Settings { leeway = 5, appName = Just "someapi" }

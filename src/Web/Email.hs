@@ -3,15 +3,16 @@
 module Web.Email (sendActivationLink) where
 
 import RIO hiding (to)
+import qualified RIO.Text.Lazy as TL
+import qualified RIO.HashMap as HashMap
+import RIO.Time (getCurrentTime)
+import RIO.Text (pack)
 import Text.Ginger (
   Template, SourcePos, GVal, ToGVal, IncludeResolver, toGVal, makeContextHtml, runGinger, parseGinger)
 import Text.Ginger.Html (htmlSource)
-import RIO.Time (getCurrentTime)
-import qualified RIO.Text.Lazy as TL
-import qualified RIO.HashMap as HashMap
 import Network.Mail.SMTP hiding (htmlPart)
 import Network.Mail.Mime (htmlPart, plainPart)
-import Config (googleMail, googleMail', googlePass)
+import System.Environment (getEnv)
 import Web.Model (User)
 import Web.JWT (makeUserToken)
 import Parse.UserTypes (renderEmail, renderName)
@@ -19,13 +20,14 @@ import Parse.UserTypes (renderEmail, renderName)
 sendActivationLink :: User -> IO ()
 sendActivationLink user = do
   now <- getCurrentTime
-  let token = makeUserToken user now
+  token <- makeUserToken user now
+  (googleMail, googleMail', googlePass) <- getEnvVars
   let urlHtml = htmlPart $ TL.fromStrict $ urlText token
-      mail = simpleMail from to cc bcc subject [body, urlHtml]
+      mail = simpleMail (from googleMail') to cc bcc subject [body, urlHtml]
   sendMailWithLoginTLS host googleMail googlePass mail
   where
     host       = "smtp.gmail.com"
-    from       = Address Nothing googleMail'
+    from       = Address Nothing
     to         = [Address (Just (renderName user.userName)) (renderEmail user.userEmail)]
     cc         = []
     bcc        = []
@@ -35,6 +37,12 @@ sendActivationLink user = do
       case decodeUtf8' token of
         Left _err -> error "Utf8 decoding error"
         Right token' -> renderTokenTemplate tokenTemplate $ context token'
+
+getEnvVars :: IO (UserName, Text, Password)
+getEnvVars = do
+  gmail <- getEnv "GOOGLE_MAIL"
+  pass <- getEnv "GOOGLE_PASS"
+  return (gmail, pack gmail, pass)
 
 renderTokenTemplate :: Template SourcePos -> HashMap Text Text -> Text
 renderTokenTemplate template contextMap =

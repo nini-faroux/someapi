@@ -57,6 +57,7 @@ library
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
+    , dotenv
     , either
     , email-validate
     , esqueleto
@@ -112,6 +113,7 @@ executable some-api-exe
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
+    , dotenv
     , either
     , email-validate
     , esqueleto
@@ -166,6 +168,7 @@ test-suite some-api-test
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
+    , dotenv
     , either
     , email-validate
     , esqueleto

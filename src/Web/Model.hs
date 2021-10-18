@@ -27,10 +27,12 @@ import qualified Database.Persist.TH as PTH
 import Database.Persist.Sql (Key, EntityField)
 import Database.Persist.Postgresql
   (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
+import qualified Data.ByteString.Char8 as LC
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
+import System.Environment (getEnv)
 import App (App, Config(..), Environment(..), makeConfig)
 import Say (say)
 import Parse.UserTypes (Name, Email, Age)
@@ -106,7 +108,9 @@ runMigrations :: Environment -> IO ()
 runMigrations devType =
   case devType of
     Local -> runMigrations' connectionStringLocal
-    Docker -> runMigrations' connectionStringDocker
+    Docker -> do
+      connStr <- connectionStringDocker
+      runMigrations' connStr
 
 runMigrations' :: ConnectionString -> IO ()
 runMigrations' connectionString = do
@@ -124,12 +128,21 @@ initialConfig = makeConfig <=< makePool
 makePool :: Environment -> IO ConnectionPool
 makePool devType = case devType of
   Local -> makePool' connectionStringLocal
-  Docker -> makePool' connectionStringDocker
+  Docker -> do
+    connStr <- connectionStringDocker
+    makePool' connStr
   where
     makePool' connStr = runStdoutLoggingT $ createPostgresqlPool connStr 2
 
-connectionStringDocker :: ConnectionString
-connectionStringDocker = "host=postgres-server port=5432 user=postgres dbname=someapi password=password" 
+connectionStringDocker :: IO ConnectionString
+connectionStringDocker = do 
+  user <- getEnv "POSTGRES_USER"
+  pass <- getEnv "POSTGRES_PASSWORD"
+  dbName <- getEnv "POSTGRES_DB"
+  return $ 
+    "host=postgres-server port=5432 user=" <> LC.pack user <>
+    " dbname=" <> LC.pack dbName <>
+    " password=" <> LC.pack pass 
 
 connectionStringLocal :: ConnectionString
 connectionStringLocal = "host=127.0.0.1 port=5432 user=ninifaroux dbname=someapi password=password"
