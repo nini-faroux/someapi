@@ -1,0 +1,295 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "1.0",
+        "title": "some API",
+        "license": {
+            "url": "http://mit.com",
+            "name": "MIT"
+        },
+        "description": "some api"
+    },
+    "definitions": {
+        "UserLogin": {
+            "example": {
+                "loginPassword": "password",
+                "loginName": "nini@mail.com"
+            },
+            "required": [
+                "loginName",
+                "loginPassword"
+            ],
+            "type": "object",
+            "description": "User login",
+            "properties": {
+                "loginPassword": {
+                    "type": "string"
+                },
+                "loginName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Token": {
+            "example": {
+                "token": "eyjhbgcioijiuzuxmiisinr5cci6ikpxvcj9.eyJhdWQiOlsic29tZWFwaSJdLCJleHAiOjE2MzE5NjU3MDcsImlhdCI6MTYzMTk2NDgwNywiaXNzIjoic29tZWFwaSIsInByaXZhdGUiOmZhbHNlLCJwcm90ZWN0ZWQiOnRydWV9.CTEFPu36V0NEHRkWL_IV4rJ4J87CL1Irac0Mn99x6lRslYvXLVDaabyDkhV_QqyOeAtq95x4hIAeSJIhE03hT"
+            },
+            "required": [
+                "token"
+            ],
+            "type": "object",
+            "description": "User token",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "NoteInput": {
+            "example": {
+                "noteBody": "do something good",
+                "noteAuthor": "nini",
+                "noteTitle": "some name"
+            },
+            "required": [
+                "noteAuthor",
+                "noteTitle",
+                "noteBody"
+            ],
+            "type": "object",
+            "description": "NoteInput",
+            "properties": {
+                "noteBody": {
+                    "type": "string"
+                },
+                "noteAuthor": {
+                    "type": "string"
+                },
+                "noteTitle": {
+                    "type": "string"
+                }
+            }
+        },
+        "UserWithPassword": {
+            "example": {
+                "email": "nini@mail.com",
+                "age": 100,
+                "name": "nini",
+                "password": "password"
+            },
+            "required": [
+                "name",
+                "age",
+                "email",
+                "password"
+            ],
+            "type": "object",
+            "description": "User with a password",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "age": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "paths": {
+        "/notes/{username}": {
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "`username` not found"
+                    },
+                    "400": {
+                        "description": "Invalid `Authorization` or `end` or `start`"
+                    },
+                    "200": {
+                        "schema": {
+                            "items": {},
+                            "type": "array"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "in": "path",
+                        "name": "username",
+                        "type": "string"
+                    },
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "start",
+                        "type": "string"
+                    },
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "end",
+                        "type": "string"
+                    },
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "Authorization",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/user": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body`"
+                    },
+                    "200": {
+                        "schema": {
+                            "maximum": 9223372036854775807,
+                            "format": "int64",
+                            "minimum": -9223372036854775808,
+                            "type": "integer"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UserWithPassword"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            }
+        },
+        "/notes": {
+            "get": {
+                "responses": {
+                    "400": {
+                        "description": "Invalid `Authorization` or `end` or `start`"
+                    },
+                    "200": {
+                        "schema": {
+                            "items": {},
+                            "type": "array"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "start",
+                        "type": "string"
+                    },
+                    {
+                        "required": false,
+                        "in": "query",
+                        "name": "end",
+                        "type": "string"
+                    },
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "Authorization",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "/login": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `body`"
+                    },
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/Token"
+                        },
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UserLogin"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    }
+                ]
+            }
+        },
+        "/note": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Invalid `Authorization` or `body`"
+                    },
+                    "200": {
+                        "schema": {},
+                        "description": ""
+                    }
+                },
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "parameters": [
+                    {
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/NoteInput"
+                        },
+                        "in": "body",
+                        "name": "body"
+                    },
+                    {
+                        "required": false,
+                        "in": "header",
+                        "name": "Authorization",
+                        "type": "string"
+                    }
+                ]
+            }
+        }
+    }
+}
