@@ -1,28 +1,34 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Main (main) where
 
+import RIO
 import Servant (serve)
 import Api (noteApi)
-import App (Config(..), Environment(..), CommandOptions(..))
+import App (Config(..), CommandOptions(..))
 import Web.Server (hoistAppServer)
 import Web.Model (runMigrations, initialConfig)
 import Docs.Docs (writeSwaggerJSON)
 import Network.Wai.Handler.Warp (run)
-import Options.Applicative (execParser, help, info, long, short, switch)
+import Options.Applicative (execParser, help, helper, header, info, long, short, switch, fullDesc, progDesc)
 
 main :: IO ()
 main = execParser options >>= runApp
   where
-    parser = Options <$> switch (short 'l' <> long "local" <> help "run app with local setup instead of docker")
-    options = info parser mempty
+    parser = Options <$> switch (short 'd' <> long "docs" <> help "Write the swagger docs for current API")
+    options = info (helper <*> parser)
+      ( fullDesc
+     <> progDesc "Some JSON API"
+     <> header "SomeAPI" )
 
 runApp :: CommandOptions -> IO ()
 runApp options
-  | isLocalEnv = writeSwaggerJSON >> run' Local
-  | otherwise = run' Docker 
-  where isLocalEnv = envType options
+  | writeDocs' = writeSwaggerJSON
+  | otherwise = run'
+  where writeDocs' = writeDocs options
 
-run' :: Environment -> IO ()
-run' envType = do
-  _ <- runMigrations envType
-  Config {..} <- initialConfig envType
+run' :: IO ()
+run' = do
+  _ <- runMigrations
+  Config {..} <- initialConfig
   run port $ serve noteApi $ hoistAppServer $ Config connectionPool port logFunc

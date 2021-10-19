@@ -38,5 +38,5 @@ data Environment =
 
 newtype CommandOptions =
   Options {
-    envType :: Bool
+    writeDocs :: Bool
   }

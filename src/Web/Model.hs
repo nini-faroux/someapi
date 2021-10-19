@@ -33,7 +33,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
 import System.Environment (getEnv)
-import App (App, Config(..), Environment(..), makeConfig)
+import App (App, Config(..), makeConfig)
 import Say (say)
 import Parse.UserTypes (Name, Email, Age)
 import Parse.NoteTypes (NoteTitle, NoteBody)
@@ -104,35 +104,25 @@ runDB query = do
   connPool <- asks connectionPool
   liftIO $ runSqlPool query connPool
 
-runMigrations :: Environment -> IO ()
-runMigrations devType =
-  case devType of
-    Local -> runMigrations' connectionStringLocal
-    Docker -> do
-      connStr <- connectionStringDocker
-      runMigrations' connStr
-
-runMigrations' :: ConnectionString -> IO ()
-runMigrations' connectionString = do
-  say "Running migrations"
-  runAction connectionString $ runMigration migrateAll
-  say "Migrations Finished"
+runMigrations :: IO ()
+runMigrations = connectionStringDocker >>= runMigrations'
+  where
+    runMigrations' connectionString = do
+      say "Running migrations"
+      runAction connectionString $ runMigration migrateAll
+      say "Migrations Finished"
 
 runAction :: ConnectionString -> SqlPersistT (LoggingT IO) a ->  IO a
 runAction connString action = runStdoutLoggingT $ withPostgresqlConn connString $ \backend ->
   runReaderT action backend
 
-initialConfig :: Environment -> IO Config
-initialConfig = makeConfig <=< makePool
-
-makePool :: Environment -> IO ConnectionPool
-makePool devType = case devType of
-  Local -> makePool' connectionStringLocal
-  Docker -> do
-    connStr <- connectionStringDocker
-    makePool' connStr
+initialConfig :: IO Config
+initialConfig = makePool >>= makeConfig
   where
-    makePool' connStr = runStdoutLoggingT $ createPostgresqlPool connStr 2
+    makePool :: IO ConnectionPool
+    makePool = do
+      connStr <- connectionStringDocker
+      runStdoutLoggingT $ createPostgresqlPool connStr 2
 
 connectionStringDocker :: IO ConnectionString
 connectionStringDocker = do 
@@ -143,6 +133,3 @@ connectionStringDocker = do
     "host=postgres-server port=5432 user=" <> LC.pack user <>
     " dbname=" <> LC.pack dbName <>
     " password=" <> LC.pack pass 
-
-connectionStringLocal :: ConnectionString
-connectionStringLocal = "host=127.0.0.1 port=5432 user=ninifaroux dbname=someapi password=password"
