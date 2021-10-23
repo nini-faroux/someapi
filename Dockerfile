@@ -32,6 +32,8 @@ RUN apt-get update && \
     libpq-dev \
     ca-certificates
 
+EXPOSE 8080/tcp
+
 COPY --from=build /root/.local/bin/some-api-exe .
 
 ARG HMAC_SECRET

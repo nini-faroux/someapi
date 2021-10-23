@@ -130,6 +130,6 @@ connectionStringDocker = do
   pass <- getEnv "POSTGRES_PASSWORD"
   dbName <- getEnv "POSTGRES_DB"
   return $ 
-    "host=postgres-server port=5432 user=" <> LC.pack user <>
+    "host=postgres-server.internal port=5432 user=" <> LC.pack user <>
     " dbname=" <> LC.pack dbName <>
     " password=" <> LC.pack pass 

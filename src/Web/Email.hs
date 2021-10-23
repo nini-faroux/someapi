@@ -54,7 +54,7 @@ tokenTemplate :: Template SourcePos
 tokenTemplate =
   either (error . show) id . runIdentity $ parseGinger nullResolver Nothing form
     where
-      form = "<form method=post action=http://localhost:8000/activate>" ++
+      form = "<form method=post action=https://some-api.fly.dev/activate>" ++
                 "<input type=hidden name=token value={{ token }}>" ++
                 "<button type=submit\">Activate</button>" ++
               "</form>"

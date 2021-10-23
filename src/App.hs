@@ -29,7 +29,7 @@ makeConfig pool = do
   logOptions' <- logOptionsHandle stdout False
   let logOptions = setLogUseTime True logOptions'
   withLogFunc logOptions $ \logFunc' ->
-    return Config { connectionPool = pool, port = 8000, logFunc = logFunc' }
+    return Config { connectionPool = pool, port = 8080, logFunc = logFunc' }
 
 data Environment =
     Local

@@ -10,7 +10,7 @@ services:
     restart: on-failure
     image: ninifaroux/someapi
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
       - GOOGLE_MAIL=${GOOGLE_MAIL}
       - GOOGLE_PASS=${GOOGLE_PASS}
