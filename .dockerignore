@@ -3,3 +3,4 @@
 .hie
 *.prof
 .env
+*.conf
