@@ -10,6 +10,7 @@ module Parse.NoteTypes
   , Year
   , NoteRequest(..)
   , DayInput(..)
+  , makeDayInput
   , validDay
   , validDayText
   , makeValidDayText
@@ -27,6 +28,7 @@ module Parse.NoteTypes
 
 import RIO
 import Servant (errBody, err400)
+import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation(..))
 import qualified Data.Text as T
@@ -70,6 +72,12 @@ data DayInput =
   , dayMonth :: !Int
   , dayDay :: !Int
   } deriving (Eq, Show, Generic)
+
+makeDayInput :: App DayInput
+makeDayInput = do
+  time <- liftIO getCurrentTime
+  let (year, month, day) = toGregorian $ utctDay time
+  return $ DayInput year month day
 
 instance FromJSON NoteTitle
 instance ToJSON NoteTitle

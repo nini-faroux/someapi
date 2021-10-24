@@ -19,7 +19,6 @@ module Api
 import RIO
 import Servant
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
-import RIO.Time (getCurrentTime, toGregorian, utctDay)
 import RIO.List (headMaybe)
 import Database.Esqueleto.Experimental (Entity(..), Key, fromSqlKey)
 import App (App)
@@ -29,7 +28,7 @@ import Web.JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
 import Parse.UserValidation (parseUser)
 import Parse.NoteValidation (parseNote)
 import Parse.UserTypes (Name)
-import Parse.NoteTypes (NoteRequest(..), DayInput(..), makeValidDayText, makeValidDay, makeValidName)
+import Parse.NoteTypes (NoteRequest(..), makeDayInput, makeValidDayText, makeValidDay, makeValidName)
 import Parse.Authenticate (makeAuthToken', getAuth, makePassword, checkPassword', checkUserCredentials, checkNameExists)
 import qualified Web.Query as Query
 
@@ -206,9 +205,8 @@ getNotesBetweenDates mName (Just startDate) (Just endDate) = do
   (start, end) <- getStartAndEndParams startDate endDate makeValidDay
   makeQuery mName start end
 getNotesBetweenDates mName (Just startDate) Nothing = do
-  time <- liftIO getCurrentTime
-  let (year, month, day) = toGregorian $ utctDay time
-  end <- makeValidDayText (DayInput year month day)
+  dayInput <- makeDayInput
+  end <- makeValidDayText dayInput
   (start, end') <- getStartAndEndParams startDate end (const $ pure end)
   makeQuery mName start end'
 getNotesBetweenDates mName Nothing (Just endDate) = do
