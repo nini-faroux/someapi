@@ -5,7 +5,7 @@ module Main (main) where
 import RIO
 import Servant (serve)
 import Api (noteApi)
-import App (Config(..), CommandOptions(..))
+import App (Config(..), CommandOptions(..), Environment(..))
 import Web.Server (hoistAppServer)
 import Web.Model (runMigrations, initialConfig)
 import Docs.Docs (writeSwaggerJSON)
@@ -15,7 +15,10 @@ import Options.Applicative (execParser, help, helper, header, info, long, short,
 main :: IO ()
 main = execParser options >>= runApp
   where
-    parser = Options <$> switch (short 'd' <> long "docs" <> help "Write the swagger docs for current API")
+    parser =
+      Options
+      <$> switch (short 'l' <> long "local" <> help "Run local docker setup instead of production setup")
+      <*> switch (short 'd' <> long "docs" <> help "Write the swagger docs for current API")
     options = info (helper <*> parser)
       ( fullDesc
      <> progDesc "Some JSON API"
@@ -24,11 +27,14 @@ main = execParser options >>= runApp
 runApp :: CommandOptions -> IO ()
 runApp options
   | writeDocs' = writeSwaggerJSON
-  | otherwise = run'
-  where writeDocs' = writeDocs options
+  | localRun' = run' Local
+  | otherwise = run' FlyProduction
+  where
+    writeDocs' = writeDocs options
+    localRun' = localRun options
 
-run' :: IO ()
-run' = do
+run' :: Environment -> IO ()
+run' environment = do
   _ <- runMigrations
-  Config {..} <- initialConfig
-  run port $ serve noteApi $ hoistAppServer $ Config connectionPool port logFunc
+  Config {..} <- initialConfig environment
+  run port $ serve noteApi $ hoistAppServer $ Config connectionPool port hostName logFunc

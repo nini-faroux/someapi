@@ -34,4 +34,4 @@ RUN apt-get update && \
 
 COPY --from=build /root/.local/bin/some-api-exe .
 
-CMD "/app/some-api-exe"
+CMD ["/app/some-api-exe", "--local"]

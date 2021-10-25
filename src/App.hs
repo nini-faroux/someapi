@@ -18,25 +18,31 @@ type App = RIO Config
 data Config = Config
   { connectionPool :: !ConnectionPool
   , port :: !Port
+  , hostName :: !Text
   , logFunc :: !LogFunc
   }
 
 instance HasLogFunc Config where
   logFuncL = lens logFunc (\c f -> c { logFunc = f })
 
-makeConfig :: ConnectionPool -> IO Config 
-makeConfig pool = do
+makeConfig :: Environment -> ConnectionPool -> IO Config 
+makeConfig environment pool = do
   logOptions' <- logOptionsHandle stdout False
   let logOptions = setLogUseTime True logOptions'
   withLogFunc logOptions $ \logFunc' ->
-    return Config { connectionPool = pool, port = 8080, logFunc = logFunc' }
+    return Config { connectionPool = pool, port = 8080, hostName = hostName', logFunc = logFunc' }
+  where
+    hostName'
+      | environment == Local = "http://localhost:8080/"
+      | otherwise = "https://some-api.fly.dev/"
 
 data Environment =
     Local
-  | Docker
+  | FlyProduction
   deriving (Eq, Show)
 
-newtype CommandOptions =
+data CommandOptions =
   Options {
-    writeDocs :: Bool
+    localRun :: Bool
+  , writeDocs :: Bool
   }

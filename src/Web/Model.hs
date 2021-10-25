@@ -33,7 +33,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
 import System.Environment (getEnv)
-import App (App, Config(..), makeConfig)
+import App (App, Config(..), Environment(..), makeConfig)
 import Say (say)
 import Parse.UserTypes (Name, Email, Age)
 import Parse.NoteTypes (NoteTitle, NoteBody)
@@ -116,8 +116,8 @@ runAction :: ConnectionString -> SqlPersistT (LoggingT IO) a ->  IO a
 runAction connString action = runStdoutLoggingT $ withPostgresqlConn connString $ \backend ->
   runReaderT action backend
 
-initialConfig :: IO Config
-initialConfig = makePool >>= makeConfig
+initialConfig :: Environment -> IO Config
+initialConfig environment = makePool >>= makeConfig environment
   where
     makePool :: IO ConnectionPool
     makePool = do
