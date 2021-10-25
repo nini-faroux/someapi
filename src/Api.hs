@@ -88,7 +88,7 @@ createUser uwp@UserWithPassword {..} = do
     pass <- liftIO $ makePassword password
     newUserId <- Query.insertUser user
     _ <- Query.insertAuth newUserId pass
-    liftIO $ sendActivationLink user
+    sendActivationLink user
     return $ fromSqlKey newUserId
 
 -- | Endpoint handler for user authentication
