@@ -1,0 +1,37 @@
+# Build stage
+FROM ubuntu as build
+
+WORKDIR /opt/build
+
+RUN apt-get update && \
+    apt-get install -y wget \
+    libjansson-dev \
+    libjwt-dev \
+    gnutls-dev \
+    libpq-dev \
+    libtinfo-dev
+
+RUN wget -qO- https://get.haskellstack.org/ | sh
+RUN export PATH=$(stack path --local-bin):$PATH
+
+COPY stack.yaml some-api.cabal ./
+RUN stack build --only-dependencies --system-ghc --fast
+
+COPY . .
+RUN stack install
+
+# Run stage
+FROM ubuntu
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y libjansson-dev \
+    libjwt-dev \
+    gnutls-dev \
+    libpq-dev \
+    ca-certificates
+
+COPY --from=build /root/.local/bin/some-api-exe .
+
+CMD "/app/some-api-exe"
