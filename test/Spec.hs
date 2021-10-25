@@ -21,7 +21,7 @@ import App
 import Web.Server (noteServer, hoistAppServer)
 import Web.Model
 import Web.JWT (Scope(..), Token(..), makeAuthToken)
-import Parse.UserTypes (nameSample, nameSample2, ageSample, emailSample)
+import Parse.UserTypes (nameSample, nameSample2, emailSample)
 import Parse.NoteTypes (DayInput(..), validDay, validDayText)
 import Data.Validation
 
@@ -282,19 +282,19 @@ noteServer' :: IO (Server NoteAPI)
 noteServer' = initialConfig Local >>= \env -> pure $ hoistAppServer env 
 
 userWPSample1 :: UserWithPassword
-userWPSample1 = UserWithPassword "nini" 100 "nini@mail.com" "password"
+userWPSample1 = UserWithPassword "nini" "nini@mail.com" "password"
 
 userWPSample2 :: UserWithPassword
-userWPSample2 = UserWithPassword "laurie" 50 "laurie@mail.com" "password"
+userWPSample2 = UserWithPassword "laurie" "laurie@mail.com" "password"
 
 malformedUser :: UserWithPassword
-malformedUser = UserWithPassword "lo" 130 "lou@@mail.com" "pass"
+malformedUser = UserWithPassword "lo" "lou@@mail.com" "pass"
 
 createdEntityUserFromSample1 :: Entity User
 createdEntityUserFromSample1 = Entity (toSqlKey 1) createdUserFromSample1
 
 createdUserFromSample1 :: User
-createdUserFromSample1 = User nameSample ageSample emailSample (Just False)
+createdUserFromSample1 = User nameSample emailSample (Just False)
 
 makeUTCTime :: (Integer, Int, Int)
           -> (Int, Int, Pico)

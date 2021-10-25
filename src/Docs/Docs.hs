@@ -39,7 +39,7 @@ import Data.Aeson (toJSON)
 import Api (noteApi)
 import Web.Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), Key(..), Note(..))
 import Web.JWT (Token(..))
-import Parse.UserTypes (Name, Age, Email, nameSample, ageSample, emailSample)
+import Parse.UserTypes (Name, Email, nameSample, emailSample)
 import Parse.NoteTypes
   (NoteTitle, NoteBody, Day, DayField, Month, Year, DayInput(..), noteTitleSample, noteBodySample, daySample)
 
@@ -102,11 +102,6 @@ instance ToSchema Email where
     & mapped.schema.description ?~ "Email"
     & mapped.schema.example ?~ toJSON emailSample
 
-instance ToSchema Age where
-  declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
-    & mapped.schema.description ?~ "Age"
-    & mapped.schema.example ?~ toJSON ageSample
-
 instance ToSchema Name where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
     & mapped.schema.description ?~ "Name"
@@ -156,7 +151,7 @@ makeUTCTime (year, mon, day) (hour, minute, sec) =
           (timeOfDayToTime (TimeOfDay hour minute sec))
 
 userSample :: User
-userSample = User nameSample ageSample emailSample (Just True)
+userSample = User nameSample emailSample (Just True)
 
 noteSample :: Note
 noteSample = Note nameSample noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0)) daySample
@@ -168,7 +163,7 @@ dayInputSample :: DayInput
 dayInputSample = DayInput 2021 10 5
 
 userWPSample :: UserWithPassword
-userWPSample = UserWithPassword "nini" 100 "nini@mail.com" "password"
+userWPSample = UserWithPassword "nini" "nini@mail.com" "password"
 
 userLoginSample :: UserLogin
 userLoginSample = UserLogin "nini@mail.com" "password"

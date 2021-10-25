@@ -3,11 +3,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Parse.UserTypes 
-  ( Age
-  , Name
+  ( Name
   , Email
   , makeName
-  , makeAge
   , makeEmail
   , validActivation
   , validPassword
@@ -15,7 +13,6 @@ module Parse.UserTypes
   , renderEmail
   , nameSample
   , nameSample2
-  , ageSample
   , emailSample
   )
   where
@@ -30,7 +27,6 @@ import Libjwt.Classes ( JwtRep(..) )
 import Parse.Validation (VError(..))
 
 newtype Name = Name Text deriving (Eq, Show, Read, Generic)
-newtype Age = Age Int deriving (Eq, Show, Read, Generic)
 newtype Email = Email Text deriving (Eq, Show, Read, Generic)
 
 renderEmail :: Email -> Text
@@ -39,13 +35,8 @@ renderEmail (Email email) = email
 renderName :: Name -> Text
 renderName (Name name) = name
 
-renderAge :: Age -> Int
-renderAge (Age age) = age
-
 instance FromJSON Name
 instance ToJSON Name
-instance FromJSON Age
-instance ToJSON Age
 instance FromJSON Email
 instance ToJSON Email
 
@@ -53,22 +44,12 @@ instance JwtRep Text Name where
   rep = renderName
   unRep = Just . Name
 
-instance JwtRep Int Age where
-  rep = renderAge
-  unRep = Just . Age
-
 instance JwtRep Text Email where
   rep = renderEmail
   unRep = Just . Email
 
 PTH.derivePersistField "Name"
-PTH.derivePersistField "Age"
 PTH.derivePersistField "Email"
-
-makeAge :: Int -> Validation [VError] Age
-makeAge age
-  | age >= 0 && age <= 120 = Success $ Age age
-  | otherwise = Failure [InvalidAge]
 
 makeName :: Text -> Validation [VError] Name
 makeName name
@@ -99,9 +80,6 @@ nameSample = Name "nini"
 
 nameSample2 :: Name
 nameSample2 = Name "laurie"
-
-ageSample :: Age
-ageSample = Age 100
 
 emailSample :: Email
 emailSample = Email "nini@mail.com"

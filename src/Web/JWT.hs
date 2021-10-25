@@ -31,7 +31,7 @@ import Web.HttpApiData (FromHttpApiData, ToHttpApiData)
 import Data.Aeson (FromJSON, ToJSON)
 import System.Environment (getEnv)
 import Web.Model (User(..))
-import Parse.UserTypes (Name, Age, Email)
+import Parse.UserTypes (Name, Email)
 import App (App)
 
 -- Type for the private claims of the JWT token
@@ -42,7 +42,7 @@ newtype Token = Token { token :: Text }
   deriving (Eq, Show, Generic, FromHttpApiData, ToHttpApiData)
 
 type UserJwt
-  = Jwt '["userName" ->> Name, "userAge" ->> Age, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs
+  = Jwt '["userName" ->> Name, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs
 
 type AuthJwt = Jwt '["protectedAccess" ->> Bool, "tokenUserName" ->> Name] 'NoNs
 
@@ -81,7 +81,6 @@ makeUserToken :: User -> UTCTime -> IO ByteString
 makeUserToken User {..} = makeToken claims 7200
   where
     claims = ( #userName ->> userName
-             , #userAge ->> userAge
              , #userEmail ->> userEmail
              , #userActivated ->> userActivated
              )

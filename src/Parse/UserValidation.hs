@@ -7,7 +7,7 @@ import Servant (errBody, err400)
 import Data.Validation (Validation(..))
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Parse.Validation (VError(..))
-import Parse.UserTypes (makeName, makeAge, makeEmail, validActivation, validPassword)
+import Parse.UserTypes (makeName, makeEmail, validActivation, validPassword)
 import Web.Model (UserWithPassword(..), User(..))
 import qualified Web.Query as Query
 import App (App)
@@ -49,6 +49,5 @@ validUser :: UserWithPassword -> Validation [VError] User
 validUser UserWithPassword {..} =
   User <$>
     makeName name <*>
-    makeAge age <*>
     makeEmail email <*>
     validActivation (Just False)

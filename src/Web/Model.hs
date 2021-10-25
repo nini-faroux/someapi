@@ -35,13 +35,12 @@ import Data.Password.Instances()
 import System.Environment (getEnv)
 import App (App, Config(..), Environment(..), makeConfig)
 import Say (say)
-import Parse.UserTypes (Name, Email, Age)
+import Parse.UserTypes (Name, Email)
 import Parse.NoteTypes (NoteTitle, NoteBody)
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User json
     name Name
-    age Age
     email Email
     activated Bool Maybe
     UniqueEmail email
@@ -67,7 +66,6 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
 data UserWithPassword =
   UserWithPassword {
     name :: !Text
-  , age :: !Int
   , email :: !Text
   , password :: !Text
   } deriving (Eq, Show, Generic)
