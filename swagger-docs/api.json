@@ -73,13 +73,11 @@
         "UserWithPassword": {
             "example": {
                 "email": "nini@mail.com",
-                "age": 100,
                 "name": "nini",
                 "password": "password"
             },
             "required": [
                 "name",
-                "age",
                 "email",
                 "password"
             ],
@@ -88,11 +86,6 @@
             "properties": {
                 "email": {
                     "type": "string"
-                },
-                "age": {
-                    "maximum": 9223372036854775807,
-                    "minimum": -9223372036854775808,
-                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
