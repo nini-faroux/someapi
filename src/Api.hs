@@ -44,7 +44,7 @@ type NoteAPI =
 type CreateUser =
      "user"
   :> ReqBody '[JSON] UserWithPassword
-  :> Post '[JSON] Int64
+  :> PostCreated '[JSON] Int64
 type ActivateUser =
      "activate"
   :> MultipartForm Mem (MultipartData Mem)
@@ -63,7 +63,7 @@ type CreateNote =
      "note"
   :> ReqBody '[JSON] NoteInput
   :> Header "Authorization" Token
-  :> Post '[JSON] (Key Note)
+  :> PostCreated '[JSON] (Key Note)
 type GetNotesByName =
      "notes"
   :> Capture "username" Text
@@ -81,7 +81,7 @@ noteApi = Proxy
 -- Example request:
 -- curl -X POST 'localhost:8000/user' \
 -- -H 'Content-Type: application/json' \
--- -d '{ "name": "<username>", "age": 90, "email": "<emailAddress>", "password": "password"}'
+-- -d '{ "name": "<username>", "email": "<emailAddress>", "password": "password"}'
 createUser :: UserWithPassword -> App Int64
 createUser uwp@UserWithPassword {..} = do
     user <- parseUser uwp

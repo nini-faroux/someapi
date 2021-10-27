@@ -18,9 +18,6 @@ Reference the documentation here:
   * https://some-api.fly.dev/docs
 
 ***
-***
-***
-
 
 To build and run locally with Docker, run the following:
 
@@ -38,8 +35,6 @@ For docker-compose to work locally you will need to:
   
 These environment variables include the HMAC secret needed for the JWT tokens.
 
-***
-***
 ***
 
 To update the swagger documentation, run the following:

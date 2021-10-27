@@ -154,7 +154,7 @@
                     "400": {
                         "description": "Invalid `body`"
                     },
-                    "200": {
+                    "201": {
                         "schema": {
                             "maximum": 9223372036854775807,
                             "format": "int64",
@@ -258,7 +258,7 @@
                     "400": {
                         "description": "Invalid `Authorization` or `body`"
                     },
-                    "200": {
+                    "201": {
                         "schema": {},
                         "description": ""
                     }
