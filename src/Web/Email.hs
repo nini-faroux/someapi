@@ -20,11 +20,11 @@ import App (App, Config(..))
 
 sendActivationLink :: User -> App ()
 sendActivationLink user = do
-  Config {..} <- ask
+  appHostName' <- asks appHostName
   now <- liftIO getCurrentTime
   token <- liftIO $ makeUserToken user now
   (googleMail, googleMail', googlePass) <- liftIO getEnvVars
-  let urlHtml = htmlPart $ TL.fromStrict $ urlText token hostName
+  let urlHtml = htmlPart $ TL.fromStrict $ urlText token appHostName'
       mail = simpleMail (from googleMail') to cc bcc subject [body, urlHtml]
   liftIO $ sendMailWithLoginTLS host googleMail googlePass mail
   where
@@ -35,10 +35,10 @@ sendActivationLink user = do
     bcc        = []
     subject    = "SomeAPI Account Activation"
     body       = plainPart ""
-    urlText token hostName' =
+    urlText token appHostName' =
       case decodeUtf8' token of
         Left _err -> error "Utf8 decoding error"
-        Right token' -> renderTokenTemplate tokenTemplate $ context token' hostName'
+        Right token' -> renderTokenTemplate tokenTemplate $ context token' appHostName'
 
 getEnvVars :: IO (UserName, Text, Password)
 getEnvVars = do
@@ -57,13 +57,13 @@ tokenTemplate =
   either (error . show) id . runIdentity $ parseGinger nullResolver Nothing form
     where
       form = 
-        "<form method=post action={{ hostName }}" ++ "activate>" ++
+        "<form method=post action={{ appHostName }}" ++ "activate>" ++
            "<input type=hidden name=token value={{ token }}>" ++
            "<button type=submit\">Activate</button>" ++
         "</form>"
 
 context :: Text -> Text -> HashMap Text Text
-context token host = HashMap.fromList [("token", token), ("hostName", host)]
+context token host = HashMap.fromList [("token", token), ("appHostName", host)]
 
 scopeLookup :: (Hashable k, Eq k, ToGVal m b) => k -> HashMap.HashMap k b -> GVal m
 scopeLookup key context' = toGVal $ HashMap.lookup key context'

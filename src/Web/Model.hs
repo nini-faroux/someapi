@@ -16,7 +16,6 @@ module Web.Model
   , EntityField(..)
   , Key(..)
   , runDB
-  , initialConfig
   , runMigrations
   ) 
   where
@@ -26,14 +25,12 @@ import RIO.Time (UTCTime)
 import qualified Database.Persist.TH as PTH
 import Database.Persist.Sql (Key, EntityField)
 import Database.Persist.Postgresql
-  (ConnectionPool, ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration, createPostgresqlPool)
-import qualified Data.ByteString.Char8 as LC
+  (ConnectionString, SqlPersistT, withPostgresqlConn, runSqlPool, runMigration)
 import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
-import System.Environment (getEnv)
-import App (App, Config(..), Environment(..), makeConfig)
+import App (App, Config(..))
 import Say (say)
 import Parse.UserTypes (Name, Email)
 import Parse.NoteTypes (NoteTitle, NoteBody)
@@ -102,32 +99,12 @@ runDB query = do
   connPool <- asks connectionPool
   liftIO $ runSqlPool query connPool
 
-runMigrations :: IO ()
-runMigrations = connectionStringDocker >>= runMigrations'
-  where
-    runMigrations' connectionString = do
-      say "Running migrations"
-      runAction connectionString $ runMigration migrateAll
-      say "Migrations Finished"
+runMigrations :: ConnectionString -> IO ()
+runMigrations connectionString = do
+  say "Running migrations"
+  runAction connectionString $ runMigration migrateAll
+  say "Migrations Finished"
 
 runAction :: ConnectionString -> SqlPersistT (LoggingT IO) a ->  IO a
-runAction connString action = runStdoutLoggingT $ withPostgresqlConn connString $ \backend ->
+runAction connectionString action = runStdoutLoggingT $ withPostgresqlConn connectionString $ \backend ->
   runReaderT action backend
-
-initialConfig :: Environment -> IO Config
-initialConfig environment = makePool >>= makeConfig environment
-  where
-    makePool :: IO ConnectionPool
-    makePool = do
-      connStr <- connectionStringDocker
-      runStdoutLoggingT $ createPostgresqlPool connStr 2
-
-connectionStringDocker :: IO ConnectionString
-connectionStringDocker = do 
-  user <- getEnv "POSTGRES_USER"
-  pass <- getEnv "POSTGRES_PASSWORD"
-  dbName <- getEnv "POSTGRES_DB"
-  return $ 
-    "host=postgres-server.internal port=5432 user=" <> LC.pack user <>
-    " dbname=" <> LC.pack dbName <>
-    " password=" <> LC.pack pass 

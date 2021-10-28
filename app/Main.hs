@@ -5,9 +5,9 @@ module Main (main) where
 import RIO
 import Servant (serve)
 import Api (noteApi)
-import App (Config(..), CommandOptions(..), Environment(..))
+import App (Config(..), CommandOptions(..), Environment(..), makeConfig)
 import Web.Server (hoistAppServer)
-import Web.Model (runMigrations, initialConfig)
+import Web.Model (runMigrations)
 import Docs.Docs (writeSwaggerJSON)
 import Network.Wai.Handler.Warp (run)
 import Options.Applicative (execParser, help, helper, header, info, long, short, switch, fullDesc, progDesc)
@@ -32,9 +32,8 @@ runApp options
   where
     writeDocs' = writeDocs options
     localRun' = localRun options
-
-run' :: Environment -> IO ()
-run' environment = do
-  _ <- runMigrations
-  Config {..} <- initialConfig environment
-  run port $ serve noteApi $ hoistAppServer $ Config connectionPool port hostName logFunc
+    run' :: Environment -> IO ()
+    run' environment = do
+      cfg@Config{..} <- makeConfig environment
+      _ <- runMigrations connectionString
+      run appPort $ serve noteApi $ hoistAppServer cfg
