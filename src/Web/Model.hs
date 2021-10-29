@@ -30,7 +30,7 @@ import Control.Monad.Logger (LoggingT(..), runStdoutLoggingT)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Password.Bcrypt (PasswordHash(..), Bcrypt)
 import Data.Password.Instances()
-import App (App, Config(..))
+import App (HasConnectionPool(..))
 import Say (say)
 import Parse.UserTypes (Name, Email)
 import Parse.NoteTypes (NoteTitle, NoteBody)
@@ -94,10 +94,10 @@ instance Z.HasField "userName" User Name where
 instance Z.HasField "userEmail" User Email where
   hasField r = (\x -> r{userEmail=x}, userEmail r)
 
-runDB :: SqlPersistT IO a -> App a
+runDB :: (MonadReader env m, HasConnectionPool env, MonadIO m) => SqlPersistT IO a -> m a
 runDB query = do
-  connPool <- asks connectionPool
-  liftIO $ runSqlPool query connPool
+  config <- ask
+  liftIO $ runSqlPool query $ getConnectionPool config
 
 runMigrations :: ConnectionString -> IO ()
 runMigrations connectionString = do

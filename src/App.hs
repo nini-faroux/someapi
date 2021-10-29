@@ -6,6 +6,8 @@ module App
   , Config(..)
   , Environment(..)
   , CommandOptions(..)
+  , HasConnectionPool(..)
+  , HasAppHostName(..)
   , makeConfig
   ) where
 
@@ -30,6 +32,16 @@ data Config = Config
   , deployHostName :: !Text
   , logFunc :: !LogFunc
   }
+
+class HasConnectionPool env where
+  getConnectionPool :: env -> ConnectionPool
+instance HasConnectionPool Config where
+  getConnectionPool = connectionPool
+
+class HasAppHostName env where
+  getAppHostName :: env -> Text
+instance HasAppHostName Config where
+  getAppHostName = appHostName
 
 instance HasLogFunc Config where
   logFuncL = lens logFunc (\c f -> c { logFunc = f })
