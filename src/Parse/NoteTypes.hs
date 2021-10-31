@@ -4,26 +4,26 @@
 module Parse.NoteTypes 
   ( NoteTitle
   , NoteBody
-  , Day
-  , DayField
+  , Date
+  , DateField
   , Month
   , Year
   , NoteRequest(..)
-  , DayInput(..)
-  , MakeValidDayText(..)
-  , MakeValidDay(..)
+  , DateInput(..)
+  , MakeValidDateInput(..)
+  , MakeValidDate(..)
   , MakeValidName(..)
-  , makeDayInput
-  , validDay
-  , validDayText
+  , makeDateInput
+  , validDate
+  , validDateInput
   , makeTitle
   , makeBody
   , makeYear
   , makeMonth
-  , makeDayField
+  , makeDateField
   , noteTitleSample
   , noteBodySample
-  , daySample
+  , dateSample
   ) where
 
 import RIO
@@ -42,14 +42,14 @@ import App (App, GetTime(..))
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)
 newtype NoteBody = NoteBody Text deriving (Eq, Show, Read, Generic)
 
-data Day = Day Year Month DayField deriving (Eq, Ord, Read, Generic)
+data Date = Date Year Month DateField deriving (Eq, Ord, Read, Generic)
 
 newtype Year = Year Integer deriving (Eq, Ord, Read, Generic)
 newtype Month = Month Int deriving (Eq, Ord, Read, Generic)
-newtype DayField = DayField Int deriving (Eq, Ord, Read, Generic)
+newtype DateField = DateField Int deriving (Eq, Ord, Read, Generic)
 
-instance Show Day where
-  show (Day year month day) = show year ++ ":" ++ show month ++ ":" ++ show day
+instance Show Date where
+  show (Date year month date) = show year ++ ":" ++ show month ++ ":" ++ show date
 
 instance Show Year where
   show (Year year) = show year
@@ -59,47 +59,47 @@ instance Show Month where
     | month >= 0 && month < 10 = "0" ++ show month
     | otherwise = show month
 
-instance Show DayField where
-  show (DayField day)
-    | day >= 0 && day < 10 = "0" ++ show day
-    | otherwise = show day
+instance Show DateField where
+  show (DateField date)
+    | date >= 0 && date < 10 = "0" ++ show date
+    | otherwise = show date
 
 data NoteRequest = CreateNoteRequest | GetNoteRequest deriving Eq
 
-data DayInput =
-  DayInput {
-    dayYear :: !Integer
-  , dayMonth :: !Int
-  , dayDay :: !Int
+data DateInput =
+  DateInput {
+    dateYear :: !Integer
+  , dateMonth :: !Int
+  , dateDate :: !Int
   } deriving (Eq, Show, Generic)
 
-makeDayInput :: (GetTime m) => m DayInput
-makeDayInput = do
+makeDateInput :: (GetTime m) => m DateInput
+makeDateInput = do
   time <- getTime
-  let (year, month, day) = toGregorian $ utctDay time
-  return $ DayInput year month day
+  let (year, month, date) = toGregorian $ utctDay time
+  return $ DateInput year month date
 
 instance FromJSON NoteTitle
 instance ToJSON NoteTitle
 instance FromJSON NoteBody
 instance ToJSON NoteBody
-instance FromJSON Day
-instance ToJSON Day
+instance FromJSON Date
+instance ToJSON Date
 instance FromJSON Year
 instance ToJSON Year
 instance FromJSON Month
 instance ToJSON Month
-instance FromJSON DayField
-instance ToJSON DayField
-instance ToJSON DayInput
-instance FromJSON DayInput
+instance FromJSON DateField
+instance ToJSON DateField
+instance ToJSON DateInput
+instance FromJSON DateInput
 
 PTH.derivePersistField "NoteTitle"
 PTH.derivePersistField "NoteBody"
-PTH.derivePersistField "Day"
+PTH.derivePersistField "Date"
 
-validDay' :: DayInput -> Validation [VError] Day
-validDay' DayInput {..} = Day <$> makeYear dayYear <*> makeMonth dayMonth <*> makeDayField dayDay
+validDate' :: DateInput -> Validation [VError] Date
+validDate' DateInput {..} = Date <$> makeYear dateYear <*> makeMonth dateMonth <*> makeDateField dateDate
 
 class Monad m => MakeValidName m where
   makeValidName :: Text -> m Name
@@ -109,40 +109,40 @@ instance MakeValidName App where
       Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
       Success name' -> return name'
 
-class Monad m => MakeValidDayText m where
-  makeValidDayText :: DayInput -> m Text
-instance MakeValidDayText App where
-  makeValidDayText date =
-    case validDayText date of
+class Monad m => MakeValidDateInput m where
+  makeValidDateInput :: DateInput -> m Text
+instance MakeValidDateInput App where
+  makeValidDateInput date =
+    case validDateInput date of
       Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
       Success date' -> return date'
 
-class Monad m => MakeValidDay m where
-  makeValidDay :: Text -> m Text
-instance MakeValidDay App where
-  makeValidDay date =
-    case validDay date of
+class Monad m => MakeValidDate m where
+  makeValidDate :: Text -> m Text
+instance MakeValidDate App where
+  makeValidDate date =
+    case validDate date of
       Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
       Success date' -> return date'
 
-validDayText :: DayInput -> Validation [VError] Text
-validDayText day =
-  case validDay' day of
+validDateInput :: DateInput -> Validation [VError] Text
+validDateInput date =
+  case validDate' date of
     Failure err -> Failure err
-    Success vDay -> Success $ T.pack $ show vDay
+    Success vDate -> Success $ T.pack $ show vDate
 
-validDay :: Text -> Validation [VError] Text
-validDay dateParam
-  | isNothing year || isNothing month || isNothing day = Failure [InvalidDate]
+validDate :: Text -> Validation [VError] Text
+validDate dateParam
+  | isNothing year || isNothing month || isNothing date = Failure [InvalidDate]
   | otherwise =
-      case vDay of
+      case vDate of
         Failure err -> Failure err
         Success d -> Success $ T.pack $ show d
   where
-    vDay = validDay' $ DayInput (fromMaybe 0 year) (fromMaybe 0 month) (fromMaybe 0 day)
+    vDate = validDate' $ DateInput (fromMaybe 0 year) (fromMaybe 0 month) (fromMaybe 0 date)
     year = readMaybe $ take 4 dateParam' :: Maybe Integer
     month = readMaybe $ takeWhile isDigit $ drop 5 dateParam' :: Maybe Int
-    day = readMaybe $ takeWhile isDigit $ drop 1 $ dropWhile isDigit $ drop 5 dateParam' :: Maybe Int
+    date = readMaybe $ takeWhile isDigit $ drop 1 $ dropWhile isDigit $ drop 5 dateParam' :: Maybe Int
     dateParam' = T.unpack dateParam
 
 makeBody :: Text -> Validation [VError] NoteBody
@@ -166,10 +166,10 @@ makeMonth month
   | month <= 0 || month > 12 = Failure [InvalidMonth]
   | otherwise = Success $ Month month
 
-makeDayField :: Int -> Validation [VError] DayField
-makeDayField day
-  | day <= 0 || day > 31 = Failure [InvalidDay]
-  | otherwise = Success $ DayField day
+makeDateField :: Int -> Validation [VError] DateField
+makeDateField date
+  | date <= 0 || date > 31 = Failure [InvalidDate]
+  | otherwise = Success $ DateField date
 
 -- | Export for the swagger docs and tests
 noteTitleSample :: NoteTitle
@@ -178,5 +178,5 @@ noteTitleSample = NoteTitle "some name"
 noteBodySample :: NoteBody
 noteBodySample = NoteBody "do something good"
 
-daySample :: Text
-daySample = T.pack $ show $ Day (Year 2021) (Month 10) (DayField 5)
+dateSample :: Text
+dateSample = T.pack $ show $ Date (Year 2021) (Month 10) (DateField 5)

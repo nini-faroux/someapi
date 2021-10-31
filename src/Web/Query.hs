@@ -3,10 +3,10 @@ module Web.Query
   , insertAuth
   , getNotes
   , getNotesByName
-  , getNotesByDay
+  , getNotesByDate
   , getNotesBetweenDates
   , getNotesBetweenDatesWithName
-  , getFirstDay
+  , getFirstDate
   , insertNote
   , insertUser
   , getUsers
@@ -44,8 +44,8 @@ getNotesBetweenDates :: Database env m => Text -> Text -> m [Entity Note]
 getNotesBetweenDates start end = runDB $
   select $ do
     note <- from $ table @Note
-    where_ (note ^. NoteDayCreated >=. val start)
-    where_ (note ^. NoteDayCreated  <=. val end)
+    where_ (note ^. NoteDateCreated >=. val start)
+    where_ (note ^. NoteDateCreated  <=. val end)
     pure note
 
 getNotesBetweenDatesWithName :: Database env m => Name -> Text -> Text -> m [Entity Note]
@@ -53,8 +53,8 @@ getNotesBetweenDatesWithName name start end = runDB $
   select $ do
     note <- from $ table @Note
     where_ (note ^. NoteUserName ==. val name)
-    where_ (note ^. NoteDayCreated >=. val start)
-    where_ (note ^. NoteDayCreated <=. val end)
+    where_ (note ^. NoteDateCreated >=. val start)
+    where_ (note ^. NoteDateCreated <=. val end)
     pure note
 
 getNotesByName :: Database env m => Name -> m [Entity Note]
@@ -64,21 +64,21 @@ getNotesByName name = runDB $
     where_ (note ^. NoteUserName ==. val name)
     pure note
 
-getFirstDay :: Database env m => m (Maybe Text)
-getFirstDay = runDB $ do
+getFirstDate :: Database env m => m (Maybe Text)
+getFirstDate = runDB $ do
   days <- select $ do
     note <- from $ table @Note
-    let mDay = min_ (note ^. NoteDayCreated)
-    pure mDay
+    let mDate = min_ (note ^. NoteDateCreated)
+    pure mDate
   case days of
     [] -> pure Nothing
     (day:_) -> pure $ unValue day
 
-getNotesByDay :: Database env m => Text -> m [Entity Note]
-getNotesByDay day = runDB $
+getNotesByDate :: Database env m => Text -> m [Entity Note]
+getNotesByDate day = runDB $
   select $ do
     note <- from $ table @Note
-    where_ (note ^. NoteDayCreated ==. val day)
+    where_ (note ^. NoteDateCreated ==. val day)
     pure note
 
 insertAuth :: Database env m => P.Key User -> PasswordHash Bcrypt -> m (P.Key Auth)

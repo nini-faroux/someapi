@@ -29,7 +29,7 @@ import Parse.UserValidation (parseUser)
 import Parse.NoteValidation (parseNote)
 import Parse.UserTypes (Name)
 import Parse.NoteTypes
-  (NoteRequest(..), makeDayInput, MakeValidName(..), MakeValidDay(..), MakeValidDayText(..))
+  (NoteRequest(..), makeDateInput, MakeValidName(..), MakeValidDate(..), MakeValidDateInput(..))
 import Parse.Authenticate (MakePassword(..), makeAuthToken', getAuth, checkPassword', checkUserCredentials, CheckNameExists(..))
 import Parse.Validation (ThrowError(..))
 import qualified Web.Query as Query
@@ -160,8 +160,8 @@ createNote note@NoteInput{..} mToken = do
 -- Example: /notes?end=2021-10-6
 getNotes :: ( Database env m
             , GetTime m
-            , MakeValidDay m
-            , MakeValidDayText m
+            , MakeValidDate m
+            , MakeValidDateInput m
             , ThrowError m
             , VerifyAuthToken m
             ) => Maybe Text -> Maybe Text -> Maybe Token -> m [Entity Note]
@@ -187,8 +187,8 @@ getNotes mStartDate mEndDate mToken = do
 getNotesByName :: ( CheckNameExists m
                   , Database env m
                   , GetTime m
-                  , MakeValidDay m
-                  , MakeValidDayText m
+                  , MakeValidDate m
+                  , MakeValidDateInput m
                   , MakeValidName m
                   , ThrowError m
                   , VerifyAuthToken m
@@ -231,31 +231,31 @@ notesRequest query mName requestType Scope {..}
 
 getNotesBetweenDates :: ( Database env m
                         , GetTime m
-                        , MakeValidDay m
-                        , MakeValidDayText m
+                        , MakeValidDate m
+                        , MakeValidDateInput m
                         , ThrowError m
                         ) => Maybe Name -> Maybe Text -> Maybe Text -> m [Entity Note]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes
 getNotesBetweenDates (Just author) Nothing Nothing = Query.getNotesByName author
 getNotesBetweenDates mName (Just startDate) (Just endDate) = do
-  (start, end) <- getStartAndEndParams startDate endDate makeValidDay
+  (start, end) <- getStartAndEndParams startDate endDate makeValidDate
   makeQuery mName start end
 getNotesBetweenDates mName (Just startDate) Nothing = do
-  dayInput <- makeDayInput
-  end <- makeValidDayText dayInput
+  dayInput <- makeDateInput
+  end <- makeValidDateInput dayInput
   (start, end') <- getStartAndEndParams startDate end (const $ pure end)
   makeQuery mName start end'
 getNotesBetweenDates mName Nothing (Just endDate) = do
-  mStart <- Query.getFirstDay
+  mStart <- Query.getFirstDate
   case mStart of
     Nothing -> Query.getNotes
     Just start -> do
-      end <- makeValidDay endDate
+      end <- makeValidDate endDate
       makeQuery mName start end
 
-getStartAndEndParams :: (MakeValidDay m) => Text -> Text -> (Text -> m Text) -> m (Text, Text)
-getStartAndEndParams start end makeDay =
-  makeValidDay start >>= \s -> makeDay end >>= \e -> return (s, e)
+getStartAndEndParams :: (MakeValidDate m) => Text -> Text -> (Text -> m Text) -> m (Text, Text)
+getStartAndEndParams start end makeDate =
+  makeValidDate start >>= \s -> makeDate end >>= \e -> return (s, e)
 
 makeQuery :: ( Database env m
              , ThrowError m

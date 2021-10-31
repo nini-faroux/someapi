@@ -41,7 +41,7 @@ import Web.Model (User(..), UserWithPassword(..), UserLogin(..), NoteInput(..), 
 import Web.JWT (Token(..))
 import Parse.UserTypes (Name, Email, nameSample, emailSample)
 import Parse.NoteTypes
-  (NoteTitle, NoteBody, Day, DayField, Month, Year, DayInput(..), noteTitleSample, noteBodySample, daySample)
+  (NoteTitle, NoteBody, Date, DateField, Month, Year, DateInput(..), noteTitleSample, noteBodySample, dateSample)
 
 writeSwaggerJSON :: IO ()
 writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
@@ -78,12 +78,12 @@ instance ToSchema NoteTitle where
     & mapped.schema.description ?~ "NoteTitle"
     & mapped.schema.example ?~ toJSON noteTitleSample
 
-instance ToSchema Day where
+instance ToSchema Date where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
-    & mapped.schema.description ?~ "Day"
-    & mapped.schema.example ?~ toJSON daySample
+    & mapped.schema.description ?~ "Date"
+    & mapped.schema.example ?~ toJSON dateSample
 
-instance ToSchema DayField where
+instance ToSchema DateField where
   declareNamedSchema _ = pure $ NamedSchema Nothing mempty
 
 instance ToSchema Month where
@@ -92,10 +92,10 @@ instance ToSchema Month where
 instance ToSchema Year where
   declareNamedSchema _ = pure $ NamedSchema Nothing mempty
 
-instance ToSchema DayInput where
+instance ToSchema DateInput where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
-    & mapped.schema.description ?~ "DayInput"
-    & mapped.schema.example ?~ toJSON dayInputSample
+    & mapped.schema.description ?~ "DateInput"
+    & mapped.schema.example ?~ toJSON dateInputSample
 
 instance ToSchema Email where
   declareNamedSchema proxy = genericDeclareNamedSchema defaultSchemaOptions proxy
@@ -146,21 +146,21 @@ instance ToParamSchema (Key User) where
 makeUTCTime :: (Integer, Int, Int)
           -> (Int, Int, Pico)
           -> UTCTime
-makeUTCTime (year, mon, day) (hour, minute, sec) =
-  UTCTime (fromGregorian year mon day)
+makeUTCTime (year, mon, date) (hour, minute, sec) =
+  UTCTime (fromGregorian year mon date)
           (timeOfDayToTime (TimeOfDay hour minute sec))
 
 userSample :: User
 userSample = User nameSample emailSample (Just True)
 
 noteSample :: Note
-noteSample = Note nameSample noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0)) daySample
+noteSample = Note nameSample noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0)) dateSample
 
 noteInputSample :: NoteInput
 noteInputSample = NoteInput "nini" "some name" "do something good"
 
-dayInputSample :: DayInput
-dayInputSample = DayInput 2021 10 5
+dateInputSample :: DateInput
+dateInputSample = DateInput 2021 10 5
 
 userWPSample :: UserWithPassword
 userWPSample = UserWithPassword "nini" "nini@mail.com" "password"

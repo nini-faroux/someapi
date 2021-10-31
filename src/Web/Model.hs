@@ -59,7 +59,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     noteTitle NoteTitle
     noteBody NoteBody
     timeCreated UTCTime
-    dayCreated Text
+    dateCreated Text
     deriving Eq Show Generic
 |]
 
