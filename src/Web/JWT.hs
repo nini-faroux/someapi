@@ -9,10 +9,10 @@
 module Web.JWT 
   ( Scope(..)
   , Token(..)
-  , makeAuthToken
-  , makeUserToken
-  , verifyAuthToken
-  , verifyUserToken
+  , MakeAuthToken(..)
+  , MakeUserToken(..)
+  , VerifyAuthToken(..)
+  , VerifyUserToken(..)
   ) where
 
 import RIO
@@ -55,38 +55,52 @@ instance FromPrivateClaims Scope
 instance FromJSON Token
 instance ToJSON Token
 
-verifyUserToken :: Text -> App User
-verifyUserToken token = do
-  eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
-  case eUser of
-    Left err -> throwIO err400 { errBody = LB.fromString err }
-    Right user -> return user
+class Monad m => VerifyUserToken m where
+  verifyUserToken :: Text -> m User
+instance VerifyUserToken App where
+  verifyUserToken token = do
+    eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
+    case eUser of
+      Left err -> throwIO err400 { errBody = LB.fromString err }
+      Right user -> return user
 
-verifyAuthToken :: Maybe Token -> App Scope
-verifyAuthToken Nothing = throwIO err400 { errBody = "Token Missing" }
-verifyAuthToken (Just (Token token)) = do
-  eScope <- decodeToken token
-  case eScope of
-    Left err -> throwIO err400 { errBody = LB.fromString err }
-    Right scope -> return scope
-  where
-    -- Need to trim the token to account for the 'Bearer' prefix 
-    -- otherwise in that case it will raise a decoding error
-    decodeToken token'
-          | hasBearerPrefix token' = liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
-          | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
-    hasBearerPrefix token' = T.take 6 token' == "Bearer"
+class Monad m => VerifyAuthToken m where
+  verifyAuthToken :: Maybe Token -> m Scope
+instance VerifyAuthToken App where
+  verifyAuthToken Nothing = throwIO err400 { errBody = "Token Missing" }
+  verifyAuthToken (Just (Token token)) = do
+    eScope <- decodeToken token
+    case eScope of
+      Left err -> throwIO err400 { errBody = LB.fromString err }
+      Right scope -> return scope
+    where
+      -- Need to trim the token to account for the 'Bearer' prefix 
+      -- otherwise in that case it will raise a decoding error
+      decodeToken token'
+            | hasBearerPrefix token' = liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
+            | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
+      hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
-makeUserToken :: User -> UTCTime -> IO ByteString
-makeUserToken User {..} = makeToken claims 7200
+class Monad m => MakeUserToken m where
+  makeUserToken :: User -> UTCTime -> m ByteString
+instance MakeUserToken App where
+  makeUserToken user time = liftIO $ makeUserToken' user time
+
+makeUserToken' :: User -> UTCTime -> IO ByteString
+makeUserToken' User {..} = makeToken claims 7200
   where
     claims = ( #userName ->> userName
              , #userEmail ->> userEmail
              , #userActivated ->> userActivated
              )
 
-makeAuthToken :: Scope -> UTCTime -> IO ByteString
-makeAuthToken Scope {..} = makeToken claims 900
+class Monad m => MakeAuthToken m where
+  makeAuthToken :: Scope -> UTCTime -> m ByteString
+instance MakeAuthToken App where
+  makeAuthToken scope time = liftIO $ makeAuthToken' scope time
+
+makeAuthToken' :: Scope -> UTCTime -> IO ByteString
+makeAuthToken' Scope {..} = makeToken claims 900
   where claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
 
 makeToken :: (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>

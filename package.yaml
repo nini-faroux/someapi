@@ -61,6 +61,7 @@ dependencies:
 - hspec-wai
 - hspec-wai-json
 - optparse-applicative
+- resource-pool
 
 library:
   source-dirs: src
@@ -71,6 +72,7 @@ library:
     - TypeOperators
     - TypeApplications
     - NoImplicitPrelude
+    - FlexibleInstances
 
   ghc-options:
     - -Wall
@@ -89,6 +91,7 @@ executables:
     default-extensions:
     - RecordWildCards
     - OverloadedStrings
+    - NoImplicitPrelude
     ghc-options:
     - -Wall
     - -Wcompat

@@ -17,20 +17,23 @@ module Api
   ) where
 
 import RIO
-import Servant
+import Servant hiding (throwError)
 import Servant.Multipart (MultipartForm, MultipartData, Mem, inputs, iValue)
 import RIO.List (headMaybe)
 import Database.Esqueleto.Experimental (Entity(..), Key, fromSqlKey)
-import App (App)
-import Web.Model (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..))
-import Web.Email (sendActivationLink)
-import Web.JWT (Scope(..), Token(..), verifyAuthToken, verifyUserToken)
+import Web.Model
+  (User(..), UserWithPassword(..), UserLogin(..), Note(..), NoteInput(..), Database)
+import Web.Email (Sendmail, sendActivationLink)
+import Web.JWT (Scope(..), Token(..), VerifyAuthToken(..), MakeAuthToken(..), VerifyUserToken(..))
 import Parse.UserValidation (parseUser)
 import Parse.NoteValidation (parseNote)
 import Parse.UserTypes (Name)
-import Parse.NoteTypes (NoteRequest(..), makeDayInput, makeValidDayText, makeValidDay, makeValidName)
-import Parse.Authenticate (makeAuthToken', getAuth, makePassword, checkPassword', checkUserCredentials, checkNameExists)
+import Parse.NoteTypes
+  (NoteRequest(..), makeDayInput, MakeValidName(..), MakeValidDay(..), MakeValidDayText(..))
+import Parse.Authenticate (MakePassword(..), makeAuthToken', getAuth, checkPassword', checkUserCredentials, CheckNameExists(..))
+import Parse.Validation (ThrowError(..))
 import qualified Web.Query as Query
+import App (GetTime(..))
 
 type NoteAPI =
        CreateUser
@@ -82,14 +85,18 @@ noteApi = Proxy
 -- curl -X POST 'localhost:8000/user' \
 -- -H 'Content-Type: application/json' \
 -- -d '{ "name": "<username>", "email": "<emailAddress>", "password": "password"}'
-createUser :: UserWithPassword -> App Int64
+createUser :: ( Database env m
+              , MakePassword m
+              , Sendmail env m
+              , ThrowError m
+              ) => UserWithPassword -> m Int64
 createUser uwp@UserWithPassword {..} = do
-    user <- parseUser uwp
-    pass <- liftIO $ makePassword password
-    newUserId <- Query.insertUser user
-    _ <- Query.insertAuth newUserId pass
-    sendActivationLink user
-    return $ fromSqlKey newUserId
+  user <- parseUser uwp
+  pass <- makePassword password
+  newUserId <- Query.insertUser user
+  _ <- Query.insertAuth newUserId pass
+  sendActivationLink user
+  return $ fromSqlKey newUserId
 
 -- | Endpoint handler for user authentication
 -- * If the user is activated and supplies valid credentials
@@ -100,9 +107,14 @@ createUser uwp@UserWithPassword {..} = do
 -- curl --location --request POST 'localhost:8000/login' \
 -- -H 'Content-Type: application/json' \
 -- -d '{ "loginName": "<userName>", "loginPassword": "password"}'
-loginUser :: UserLogin -> App Token
+loginUser :: ( CheckNameExists m
+             , Database env m
+             , GetTime m
+             , MakeAuthToken m
+             , MakeValidName m
+             , ThrowError m
+             ) => UserLogin -> m Token
 loginUser UserLogin {..} = do
-  logInfo $ "Attempting to authenticate user: " <> displayShow loginName
   name <- makeValidName loginName
   existingName <- checkNameExists name
   hashPass <- getAuth existingName
@@ -117,9 +129,14 @@ loginUser UserLogin {..} = do
 -- -H 'Authorization: Bearer "<your token>"' \
 -- -H 'Content-Type: application/json' \
 -- -d '{ "noteAuthor" : "<your userName>", "noteTitle" : "some title", "noteBody": "do something good"}'
-createNote :: NoteInput -> Maybe Token -> App (Key Note)
+createNote :: ( CheckNameExists m
+              , Database env m
+              , GetTime m
+              , MakeValidName m
+              , ThrowError m
+              , VerifyAuthToken m
+              ) => NoteInput -> Maybe Token -> m (Key Note)
 createNote note@NoteInput{..} mToken = do
-  logInfo $ "Attempting to create new note by: " <> displayShow noteAuthor
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
   notesRequest (insertNote note) (Just existingName) CreateNoteRequest scope
   where
@@ -141,7 +158,13 @@ createNote note@NoteInput{..} mToken = do
 -- * If only a (valid) end parameter is specified
 -- then all the notes up until that date will be returned
 -- Example: /notes?end=2021-10-6
-getNotes :: Maybe Text -> Maybe Text -> Maybe Token -> App [Entity Note]
+getNotes :: ( Database env m
+            , GetTime m
+            , MakeValidDay m
+            , MakeValidDayText m
+            , ThrowError m
+            , VerifyAuthToken m
+            ) => Maybe Text -> Maybe Text -> Maybe Token -> m [Entity Note]
 getNotes mStartDate mEndDate mToken = do
   scope <- verifyAuthToken mToken
   notesRequest (query mStartDate mEndDate) Nothing GetNoteRequest scope
@@ -161,7 +184,15 @@ getNotes mStartDate mEndDate mToken = do
 -- /notes/<authorName>?start=2021-8-6&end=2021-10-6
 -- /notes/<authorName>?start=2021-8-6
 -- /notes/<authorName>?end=2021-10-6
-getNotesByName :: Text -> Maybe Text -> Maybe Text -> Maybe Token -> App [Entity Note]
+getNotesByName :: ( CheckNameExists m
+                  , Database env m
+                  , GetTime m
+                  , MakeValidDay m
+                  , MakeValidDayText m
+                  , MakeValidName m
+                  , ThrowError m
+                  , VerifyAuthToken m
+                  ) => Text -> Maybe Text -> Maybe Text -> Maybe Token -> m [Entity Note]
 getNotesByName noteAuthor mStart mEnd mToken = do
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
   notesRequest (query existingName mStart mEnd) (Just existingName) GetNoteRequest scope
@@ -173,7 +204,9 @@ getNotesByName noteAuthor mStart mEnd mToken = do
 
 -- | Endpoint handler for when the user clicks on the email activation link
 -- The user is activated allowing them to authenticate
-activateUserAccount :: MultipartData Mem -> App (Maybe (Entity User))
+activateUserAccount :: ( Database env m
+                       , VerifyUserToken m
+                       ) => MultipartData Mem -> m (Maybe (Entity User))
 activateUserAccount formData = do
   user <- verifyUserToken $ getFormInput formData
   Query.updateUserActivatedValue user.userEmail user.userName
@@ -185,20 +218,23 @@ activateUserAccount formData = do
         nameValuePairs = inputs formData'
         token = maybe "" iValue $ headMaybe nameValuePairs
 
-notesRequest :: App a -> Maybe Name -> NoteRequest -> Scope -> App a
+notesRequest :: (ThrowError m) => m a -> Maybe Name -> NoteRequest -> Scope -> m a
 notesRequest query mName requestType Scope {..}
-  | not protectedAccess = throwIO err403 { errBody = "Not Authorised" }
-  | requestType == GetNoteRequest = logGetRequest >> query
-  | matchingName mName tokenUserName = logPostRequest >> query
-  | otherwise = throwIO err403 { errBody = errorMessage }
+  | not protectedAccess = throwError err403 { errBody = "Not Authorised" }
+  | requestType == GetNoteRequest = query
+  | matchingName mName tokenUserName = query
+  | otherwise = throwError err403 { errBody = errorMessage }
   where
     matchingName Nothing _tokenName = False
     matchingName (Just userName) tokenUserName' = userName == tokenUserName'
     errorMessage = "Not Authorised - use your own user name to create new notes"
-    logGetRequest = logInfo "Retrieving notes"
-    logPostRequest = logInfo "Creating note"
 
-getNotesBetweenDates :: Maybe Name -> Maybe Text -> Maybe Text -> App [Entity Note]
+getNotesBetweenDates :: ( Database env m
+                        , GetTime m
+                        , MakeValidDay m
+                        , MakeValidDayText m
+                        , ThrowError m
+                        ) => Maybe Name -> Maybe Text -> Maybe Text -> m [Entity Note]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes
 getNotesBetweenDates (Just author) Nothing Nothing = Query.getNotesByName author
 getNotesBetweenDates mName (Just startDate) (Just endDate) = do
@@ -217,15 +253,17 @@ getNotesBetweenDates mName Nothing (Just endDate) = do
       end <- makeValidDay endDate
       makeQuery mName start end
 
-getStartAndEndParams :: Text -> Text -> (Text -> App Text) -> App (Text, Text)
+getStartAndEndParams :: (MakeValidDay m) => Text -> Text -> (Text -> m Text) -> m (Text, Text)
 getStartAndEndParams start end makeDay =
   makeValidDay start >>= \s -> makeDay end >>= \e -> return (s, e)
 
-makeQuery :: Maybe Name -> Text -> Text -> App [Entity Note]
+makeQuery :: ( Database env m
+             , ThrowError m
+             ) => Maybe Name -> Text -> Text -> m [Entity Note]
 makeQuery mName start end
-  | start > end = throwIO err400 { errBody = "Error: end date is before start date" }
+  | start > end = throwError err400 { errBody = "Error: end date is before start date" }
   | otherwise = queryBetweenDates mName start end
   where
-    queryBetweenDates :: Maybe Name -> Text -> Text -> App [Entity Note]
+    queryBetweenDates :: (Database env m) => Maybe Name -> Text -> Text -> m [Entity Note]
     queryBetweenDates Nothing start' end' = Query.getNotesBetweenDates start' end'
     queryBetweenDates (Just name) start' end' = Query.getNotesBetweenDatesWithName name start' end'

@@ -1,63 +1,80 @@
 module Parse.Authenticate 
   ( makeAuthToken'
   , checkUserCredentials
-  , checkNameExists
-  , makePassword
+  , CheckNameExists(..)
   , checkPassword'
   , getAuth
+  , MakePassword(..)
   ) where
 
 import RIO
 import Servant (errBody, err400, err401, err404)
-import RIO.Time (getCurrentTime)
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Password.Bcrypt (PasswordCheck(..), PasswordHash, Bcrypt, mkPassword, checkPassword, hashPassword)
 import Database.Esqueleto.Experimental (Entity(..))
-import Web.JWT (Token(..), Scope(..), makeAuthToken, verifyAuthToken)
-import App (App)
+import Web.JWT (Token(..), Scope(..), MakeAuthToken(..), VerifyAuthToken(..))
+import App (App, GetTime(..))
 import Parse.UserTypes (Name)
-import Parse.NoteTypes (makeValidName)
+import Parse.NoteTypes (MakeValidName(..))
 import Web.Model (Auth(..))
 import qualified Web.Query as Query
+import Web.Query (Database)
+import Parse.Validation (ThrowError(..))
 
-makeAuthToken' :: Name -> App Token
+makeAuthToken' :: ( Database env m
+                  , GetTime m
+                  , MakeAuthToken m
+                  , ThrowError m
+                  ) => Name -> m Token
 makeAuthToken' existingName = do
-  now <- liftIO getCurrentTime
-  token <- liftIO $ makeAuthToken (Scope { protectedAccess = True, tokenUserName = existingName }) now
+  now <- getTime
+  token <- makeAuthToken (Scope { protectedAccess = True, tokenUserName = existingName }) now
   case decodeUtf8' token of
-    Left err -> throwIO err400 { errBody = LB.fromString $ show err }
+    Left err -> throwError err400 { errBody = LB.fromString $ show err }
     Right token' -> return $ Token token'
 
-checkUserCredentials :: Maybe Token -> Text -> App (Name, Scope)
+checkUserCredentials :: ( CheckNameExists m
+                        , MakeValidName m
+                        , VerifyAuthToken m
+                        ) 
+                     => Maybe Token -> Text -> m (Name, Scope)
 checkUserCredentials mToken author = do
   scope <- verifyAuthToken mToken
   name <- makeValidName author
   existingName <- checkNameExists name
   return (existingName, scope)
 
-checkNameExists :: Name -> App Name
-checkNameExists name = do
-  mUser <- Query.getUserByName name
-  case mUser of
-    Nothing -> throwIO err404 { errBody = "User not found" }
-    Just _user -> return name
+class Monad m => CheckNameExists m where
+  checkNameExists :: Name -> m Name
+instance CheckNameExists App where
+  checkNameExists name = do
+    mUser <- Query.getUserByName name
+    case mUser of
+      Nothing -> throwIO err404 { errBody = "User not found" }
+      Just _user -> return name
 
-makePassword :: Text -> IO (PasswordHash Bcrypt)
-makePassword = hashPassword . mkPassword
+class Monad m => MakePassword m where
+  makePassword :: Text -> m (PasswordHash Bcrypt)
+instance MakePassword App where
+  makePassword txt = liftIO $ hashPassword $ mkPassword txt
 
-checkPassword' :: Text -> PasswordHash Bcrypt -> App PasswordCheck
+checkPassword' :: ( Database env m
+                  , ThrowError m)
+                  => Text -> PasswordHash Bcrypt -> m PasswordCheck
 checkPassword' loginPassword hashPass = do
   let pass = mkPassword loginPassword
   case checkPassword pass hashPass of
-    PasswordCheckFail -> throwIO err401 { errBody = authErrorMessage }
+    PasswordCheckFail -> throwError err401 { errBody = authErrorMessage }
     PasswordCheckSuccess -> return PasswordCheckSuccess
 
-getAuth :: Name -> App (PasswordHash Bcrypt)
+getAuth :: ( Database env m
+           , ThrowError m
+           ) => Name -> m (PasswordHash Bcrypt)
 getAuth name = do
   auth <- Query.getAuth name
   case auth of
     [Entity _ (Auth _uid hashPass)] -> return hashPass
-    _err -> throwIO err401 { errBody = authErrorMessage }
+    _err -> throwError err401 { errBody = authErrorMessage }
 
 authErrorMessage :: LB.ByteString
 authErrorMessage = "Incorrect username or password, or account not yet activated"

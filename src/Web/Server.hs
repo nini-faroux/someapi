@@ -9,7 +9,6 @@ import Control.Monad.Except (ExceptT(..))
 import Api (NoteAPI, noteApi, createUser, loginUser, activateUserAccount, getNotes, createNote, getNotesByName)
 import App (App, Config)
 
--- | The Server for the API
 noteServer :: ServerT NoteAPI App
 noteServer =
        createUser
@@ -21,6 +20,6 @@ noteServer =
 
 -- | Conversion function from the RIO monad to Servant's ExceptT based monad
 hoistAppServer :: Config -> Server NoteAPI
-hoistAppServer env' = hoistServer noteApi (transform env') noteServer where
+hoistAppServer config = hoistServer noteApi (transform config) noteServer where
   transform :: Config -> App a -> Handler a
-  transform env app = Handler $ ExceptT $ try $ runRIO env app
+  transform config' app = Handler $ ExceptT $ try $ runRIO config' app

@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module App 
   ( App
   , Config(..)
@@ -8,10 +5,13 @@ module App
   , CommandOptions(..)
   , HasConnectionPool(..)
   , HasAppHostName(..)
+  , GetTime(..)
+  , GetEnv(..)
   , makeConfig
   ) where
 
 import RIO
+import RIO.Time (UTCTime, getCurrentTime)
 import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPostgresqlPool)
 import Network.Wai.Handler.Warp (Port)
 import Control.Monad.Logger (runStdoutLoggingT)
@@ -83,6 +83,16 @@ makeConfig environment = do
        <> " user=" <> LC.pack dbUser'
        <> " dbname=" <> LC.pack dbName'
        <> " password=" <> LC.pack pass
+
+class Monad m => GetTime m where
+  getTime :: m UTCTime
+instance GetTime App where
+  getTime = liftIO getCurrentTime
+
+class Monad m => GetEnv m where
+  getEnv' :: String -> m String
+instance GetEnv App where
+  getEnv' var = liftIO $ getEnv var
 
 data Environment =
     Local

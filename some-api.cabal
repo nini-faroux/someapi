@@ -49,6 +49,7 @@ library
       TypeOperators
       TypeApplications
       NoImplicitPrelude
+      FlexibleInstances
   ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -Wredundant-constraints -Wmissing-export-lists -Werror
   build-depends:
       aeson
@@ -78,6 +79,7 @@ library
     , persistent-postgresql
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , rio
     , say
     , servant
@@ -104,6 +106,7 @@ executable some-api-exe
   default-extensions:
       RecordWildCards
       OverloadedStrings
+      NoImplicitPrelude
   ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -Wredundant-constraints -Wmissing-export-lists -Werror -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
@@ -133,6 +136,7 @@ executable some-api-exe
     , persistent-postgresql
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , rio
     , say
     , servant
@@ -187,6 +191,7 @@ test-suite some-api-test
     , persistent-postgresql
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , rio
     , say
     , servant

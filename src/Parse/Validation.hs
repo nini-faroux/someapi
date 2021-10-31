@@ -1,8 +1,10 @@
 module Parse.Validation
-  (VError(..)
+  ( VError(..)
+  , ThrowError(..)
   ) where
 
 import RIO
+import App (App)
 
 data VError =
     ExistingEmail
@@ -20,3 +22,8 @@ data VError =
   | InvalidMonth
   | InvalidId
   deriving Show
+
+class Monad m => ThrowError m where
+  throwError :: Exception e => e -> m a
+instance ThrowError App where
+  throwError e = liftIO $ throwIO e
