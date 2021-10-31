@@ -10,17 +10,15 @@ module Parse.NoteTypes
   , Year
   , NoteRequest(..)
   , DateInput(..)
-  , MakeValidDateInput(..)
   , MakeValidDate(..)
   , MakeValidName(..)
   , makeDateInput
-  , validDate
-  , validDateInput
+  , validateDate'
   , makeTitle
   , makeBody
   , makeYear
   , makeMonth
-  , makeDateField
+  , makeDayField
   , noteTitleSample
   , noteBodySample
   , dateSample
@@ -70,7 +68,7 @@ data DateInput =
   DateInput {
     dateYear :: !Integer
   , dateMonth :: !Int
-  , dateDate :: !Int
+  , dateDay :: !Int
   } deriving (Eq, Show, Generic)
 
 makeDateInput :: (GetTime m) => m DateInput
@@ -98,9 +96,6 @@ PTH.derivePersistField "NoteTitle"
 PTH.derivePersistField "NoteBody"
 PTH.derivePersistField "Date"
 
-validDate' :: DateInput -> Validation [VError] Date
-validDate' DateInput {..} = Date <$> makeYear dateYear <*> makeMonth dateMonth <*> makeDateField dateDate
-
 class Monad m => MakeValidName m where
   makeValidName :: Text -> m Name
 instance MakeValidName App where
@@ -109,41 +104,36 @@ instance MakeValidName App where
       Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
       Success name' -> return name'
 
-class Monad m => MakeValidDateInput m where
-  makeValidDateInput :: DateInput -> m Text
-instance MakeValidDateInput App where
-  makeValidDateInput date =
-    case validDateInput date of
-      Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-      Success date' -> return date'
-
 class Monad m => MakeValidDate m where
-  makeValidDate :: Text -> m Text
+  makeValidDate :: Either Text DateInput -> m Text
 instance MakeValidDate App where
-  makeValidDate date =
-    case validDate date of
-      Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-      Success date' -> return date'
+  makeValidDate eDate =
+    case eDate of
+      Left dateText -> makeValidDate' validateDate dateText
+      Right dateInput -> makeValidDate' validateDate' dateInput
+    where
+      makeValidDate' f date =
+        case f date of
+          Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
+          Success vDate -> return vDate
 
-validDateInput :: DateInput -> Validation [VError] Text
-validDateInput date =
-  case validDate' date of
-    Failure err -> Failure err
-    Success vDate -> Success $ T.pack $ show vDate
+validateDate' :: DateInput -> Validation [VError] Text
+validateDate' DateInput {..} =
+  let date = Date <$> makeYear dateYear <*> makeMonth dateMonth <*> makeDayField dateDay
+   in case date of
+     Failure err -> Failure err
+     Success vDate -> Success $ T.pack $ show vDate
 
-validDate :: Text -> Validation [VError] Text
-validDate dateParam
-  | isNothing year || isNothing month || isNothing date = Failure [InvalidDate]
-  | otherwise =
-      case vDate of
-        Failure err -> Failure err
-        Success d -> Success $ T.pack $ show d
+validateDate :: Text -> Validation [VError] Text
+validateDate = validateDate' . makeDateInputFromText
   where
-    vDate = validDate' $ DateInput (fromMaybe 0 year) (fromMaybe 0 month) (fromMaybe 0 date)
-    year = readMaybe $ take 4 dateParam' :: Maybe Integer
-    month = readMaybe $ takeWhile isDigit $ drop 5 dateParam' :: Maybe Int
-    date = readMaybe $ takeWhile isDigit $ drop 1 $ dropWhile isDigit $ drop 5 dateParam' :: Maybe Int
-    dateParam' = T.unpack dateParam
+    makeDateInputFromText :: Text -> DateInput
+    makeDateInputFromText dateParam = DateInput (fromMaybe 0 year) (fromMaybe 0 month) (fromMaybe 0 date)
+      where
+        year = readMaybe $ take 4 dateParam' :: Maybe Integer
+        month = readMaybe $ takeWhile isDigit $ drop 5 dateParam' :: Maybe Int
+        date = readMaybe $ takeWhile isDigit $ drop 1 $ dropWhile isDigit $ drop 5 dateParam' :: Maybe Int
+        dateParam' = T.unpack dateParam
 
 makeBody :: Text -> Validation [VError] NoteBody
 makeBody body
@@ -166,8 +156,8 @@ makeMonth month
   | month <= 0 || month > 12 = Failure [InvalidMonth]
   | otherwise = Success $ Month month
 
-makeDateField :: Int -> Validation [VError] DateField
-makeDateField date
+makeDayField :: Int -> Validation [VError] DateField
+makeDayField date
   | date <= 0 || date > 31 = Failure [InvalidDate]
   | otherwise = Success $ DateField date
 

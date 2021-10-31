@@ -10,7 +10,7 @@ import Data.Validation (Validation(..))
 import Web.Model (NoteInput(..), Note(..))
 import Parse.Validation (VError(..), ThrowError(..))
 import App (GetTime(..))
-import Parse.NoteTypes (DateInput(..), makeDateInput, makeBody, makeTitle, validDateInput)
+import Parse.NoteTypes (DateInput(..), makeDateInput, makeBody, makeTitle, validateDate')
 import qualified Parse.UserTypes as UserTypes
 
 -- | Parses the note into a valid form
@@ -30,13 +30,13 @@ parseNote noteInput = do
 -- Produces either a valid note 
 -- or accumulates any validation errors, encountered at each step, in a list
 validNote :: NoteInput -> UTCTime -> DateInput -> Validation [VError] Note
-validNote NoteInput {..} time day =
+validNote NoteInput {..} time date =
   Note 
     <$> UserTypes.makeName noteAuthor
     <*> makeTitle noteTitle
     <*> makeBody noteBody
     <*> validTime time
-    <*> validDateInput day
+    <*> validateDate' date
 
 validTime :: UTCTime -> Validation [VError] UTCTime
 validTime = Success
