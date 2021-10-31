@@ -36,10 +36,10 @@ import App (App)
 
 -- Type for the private claims of the JWT token
 data Scope = Scope { protectedAccess :: Bool, tokenUserName :: Name }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Generic)
 
 newtype Token = Token { token :: Text }
-  deriving (Eq, Show, Generic, FromHttpApiData, ToHttpApiData)
+  deriving (Generic, FromHttpApiData, ToHttpApiData)
 
 type UserJwt
   = Jwt '["userName" ->> Name, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs

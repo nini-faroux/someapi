@@ -84,7 +84,7 @@ noteApi = Proxy
 -- Example request:
 -- curl -X POST 'localhost:8000/user' \
 -- -H 'Content-Type: application/json' \
--- -d '{ "name": "<username>", "email": "<emailAddress>", "password": "password"}'
+-- -d '{ "name": "<username>", "email": "<emailAddress>", "password": "<password>"}'
 createUser :: ( Database env m
               , MakePassword m
               , Sendmail env m
@@ -247,7 +247,7 @@ getNotesBetweenDates mName Nothing (Just endDate) = do
   case mStart of
     Nothing -> Query.getNotes
     Just start -> do
-      end <- makeValidDate (Left endDate)
+      end <- makeValidDate $ Left endDate
       makeQuery mName start end
 
 getStartAndEndParams :: (MakeValidDate m) => Text -> Text -> m (Text, Text)
