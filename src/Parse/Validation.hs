@@ -1,13 +1,13 @@
-module Parse.Validation
-  ( VError(..)
-  , ThrowError(..)
-  ) where
+module Parse.Validation (
+  VError (..),
+  ThrowError (..),
+) where
 
-import RIO
 import App (App)
+import RIO
 
-data VError =
-    ExistingEmail
+data VError
+  = ExistingEmail
   | ExistingUserName
   | InvalidEmail
   | InvalidAge
@@ -21,9 +21,10 @@ data VError =
   | InvalidYear
   | InvalidMonth
   | InvalidId
-  deriving Show
+  deriving (Show)
 
 class Monad m => ThrowError m where
   throwError :: Exception e => e -> m a
+
 instance ThrowError App where
   throwError e = liftIO $ throwIO e

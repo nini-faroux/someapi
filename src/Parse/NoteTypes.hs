@@ -1,49 +1,70 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Parse.NoteTypes 
-  ( NoteTitle
-  , NoteBody
-  , Date
-  , DateField
-  , Month
-  , Year
-  , NoteRequest(..)
-  , DateInput(..)
-  , MakeValidDate(..)
-  , MakeValidName(..)
-  , makeDateInput
-  , validateDate'
-  , makeTitle
-  , makeBody
-  , makeYear
-  , makeMonth
-  , makeDayField
-  , noteTitleSample
-  , noteBodySample
-  , dateSample
-  ) where
+module Parse.NoteTypes (
+  NoteTitle,
+  NoteBody,
+  Date,
+  DateField,
+  Month,
+  Year,
+  NoteRequest (..),
+  DateInput (..),
+  MakeValidDate (..),
+  MakeValidName (..),
+  makeDateInput,
+  validateDate',
+  makeTitle,
+  makeBody,
+  makeYear,
+  makeMonth,
+  makeDayField,
+  noteTitleSample,
+  noteBodySample,
+  dateSample,
+) where
 
-import RIO
-import Servant (errBody, err400)
-import RIO.Time (toGregorian, utctDay)
+import App (
+  App,
+  GetTime (..),
+ )
+import Data.Aeson (
+  FromJSON,
+  ToJSON,
+ )
 import qualified Data.ByteString.Lazy.UTF8 as LB
-import Data.Validation (Validation(..))
-import qualified Data.Text as T
-import qualified Database.Persist.TH as PTH
-import Data.Aeson (FromJSON, ToJSON)
 import Data.Char (isDigit)
-import Parse.UserTypes (Name, makeName)
-import Parse.Validation (VError(..), throwError)
-import App (App, GetTime(..))
+import qualified Data.Text as T
+import Data.Validation (Validation (..))
+import qualified Database.Persist.TH as PTH
+import Parse.UserTypes (
+  Name,
+  makeName,
+ )
+import Parse.Validation (
+  VError (..),
+  throwError,
+ )
+import RIO
+import RIO.Time (
+  toGregorian,
+  utctDay,
+ )
+import Servant (
+  err400,
+  errBody,
+ )
 
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)
+
 newtype NoteBody = NoteBody Text deriving (Eq, Show, Read, Generic)
 
 data Date = Date Year Month DateField deriving (Eq, Ord, Read, Generic)
 
 newtype Year = Year Integer deriving (Eq, Ord, Read, Generic)
+
 newtype Month = Month Int deriving (Eq, Ord, Read, Generic)
+
 newtype DateField = DateField Int deriving (Eq, Ord, Read, Generic)
 
 instance Show Date where
@@ -62,14 +83,14 @@ instance Show DateField where
     | date >= 0 && date < 10 = "0" ++ show date
     | otherwise = show date
 
-data NoteRequest = CreateNoteRequest | GetNoteRequest deriving Eq
+data NoteRequest = CreateNoteRequest | GetNoteRequest deriving (Eq)
 
-data DateInput =
-  DateInput {
-    dateYear :: !Integer
+data DateInput = DateInput
+  { dateYear :: !Integer
   , dateMonth :: !Int
   , dateDay :: !Int
-  } deriving (Eq, Show, Generic)
+  }
+  deriving (Eq, Show, Generic)
 
 makeDateInput :: (GetTime m) => m DateInput
 makeDateInput = do
@@ -78,38 +99,55 @@ makeDateInput = do
   return $ DateInput year month date
 
 instance FromJSON NoteTitle
+
 instance ToJSON NoteTitle
+
 instance FromJSON NoteBody
+
 instance ToJSON NoteBody
+
 instance FromJSON Date
+
 instance ToJSON Date
+
 instance FromJSON Year
+
 instance ToJSON Year
+
 instance FromJSON Month
+
 instance ToJSON Month
+
 instance FromJSON DateField
+
 instance ToJSON DateField
+
 instance ToJSON DateInput
+
 instance FromJSON DateInput
 
 PTH.derivePersistField "NoteTitle"
+
 PTH.derivePersistField "NoteBody"
+
 PTH.derivePersistField "Date"
 
 class Monad m => MakeValidName m where
   makeValidName :: Text -> m Name
+
 instance MakeValidName App where
-  makeValidName name = checkSuccess makeName name (\err -> throwError err400 { errBody = LB.fromString $ show err }) return
+  makeValidName name = checkSuccess makeName name (\err -> throwError err400 {errBody = LB.fromString $ show err}) return
 
 class Monad m => MakeValidDate m where
   makeValidDate :: Either Text DateInput -> m Text
+
 instance MakeValidDate App where
   makeValidDate eDate =
     case eDate of
       Left dateText -> makeValidDate' validateDate dateText
       Right dateInput -> makeValidDate' validateDate' dateInput
     where
-      makeValidDate' f date = checkSuccess f date (\err -> throwError err400 { errBody = LB.fromString $ show err }) return
+      makeValidDate' f date = checkSuccess f date (\err -> throwError err400 {errBody = LB.fromString $ show err}) return
 
 validateDate' :: DateInput -> Validation [VError] Text
 validateDate' DateInput {..} =
@@ -140,9 +178,10 @@ makeBody body
 
 makeTitle :: Text -> Validation [VError] NoteTitle
 makeTitle name
-  | nameLength < 5 || nameLength > 30 = Failure [InvalidName] 
+  | nameLength < 5 || nameLength > 30 = Failure [InvalidName]
   | otherwise = Success $ NoteTitle name
-  where nameLength = T.length name
+  where
+    nameLength = T.length name
 
 makeYear :: Integer -> Validation [VError] Year
 makeYear year

@@ -1,32 +1,41 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Parse.UserTypes 
-  ( Name
-  , Email
-  , makeName
-  , makeEmail
-  , validActivation
-  , validPassword
-  , renderName
-  , renderEmail
-  , nameSample
-  , nameSample2
-  , emailSample
-  )
-  where
+module Parse.UserTypes (
+  Name,
+  Email,
+  makeName,
+  makeEmail,
+  validActivation,
+  validPassword,
+  renderName,
+  renderEmail,
+  nameSample,
+  nameSample2,
+  emailSample,
+) where
 
-import RIO
-import Data.Validation ( Validation(..) )
+import Data.Aeson (
+  FromJSON,
+  ToJSON,
+ )
 import qualified Data.Text as T
-import qualified Text.Email.Validate as EV
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Validation (
+  Validation (..),
+ )
 import qualified Database.Persist.TH as PTH
-import Libjwt.Classes ( JwtRep(..) )
-import Parse.Validation (VError(..))
+import Libjwt.Classes (
+  JwtRep (..),
+ )
+import Parse.Validation (
+  VError (..),
+ )
+import RIO
+import qualified Text.Email.Validate as EV
 
 newtype Name = Name Text deriving (Eq, Show, Read, Generic)
+
 newtype Email = Email Text deriving (Eq, Show, Read, Generic)
 
 renderEmail :: Email -> Text
@@ -36,8 +45,11 @@ renderName :: Name -> Text
 renderName (Name name) = name
 
 instance FromJSON Name
+
 instance ToJSON Name
+
 instance FromJSON Email
+
 instance ToJSON Email
 
 instance JwtRep Text Name where
@@ -49,13 +61,15 @@ instance JwtRep Text Email where
   unRep = Just . Email
 
 PTH.derivePersistField "Name"
+
 PTH.derivePersistField "Email"
 
 makeName :: Text -> Validation [VError] Name
 makeName name
-  | nameLength < 4 || nameLength > 20 = Failure [InvalidName] 
+  | nameLength < 4 || nameLength > 20 = Failure [InvalidName]
   | otherwise = Success $ Name name
-  where nameLength = T.length name
+  where
+    nameLength = T.length name
 
 makeEmail :: Text -> Validation [VError] Email
 makeEmail email
@@ -72,7 +86,8 @@ validPassword :: Text -> Validation [VError] Text
 validPassword pass
   | lengthPass < 8 = Failure [InvalidPassword]
   | otherwise = Success pass
-  where lengthPass = T.length pass
+  where
+    lengthPass = T.length pass
 
 -- | Export for the swagger docs and tests
 nameSample :: Name

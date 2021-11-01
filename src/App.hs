@@ -1,22 +1,22 @@
-module App 
-  ( App
-  , Config(..)
-  , Environment(..)
-  , CommandOptions(..)
-  , HasConnectionPool(..)
-  , HasAppHostName(..)
-  , GetTime(..)
-  , GetEnv(..)
-  , makeConfig
-  ) where
+module App (
+  App,
+  Config (..),
+  Environment (..),
+  CommandOptions (..),
+  HasConnectionPool (..),
+  HasAppHostName (..),
+  GetTime (..),
+  GetEnv (..),
+  makeConfig,
+) where
 
-import RIO
-import RIO.Time (UTCTime, getCurrentTime)
+import Control.Monad.Logger (runStdoutLoggingT)
+import qualified Data.ByteString.Char8 as LC
 import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPostgresqlPool)
 import Network.Wai.Handler.Warp (Port)
-import Control.Monad.Logger (runStdoutLoggingT)
+import RIO
+import RIO.Time (UTCTime, getCurrentTime)
 import System.Environment (getEnv)
-import qualified Data.ByteString.Char8 as LC
 
 type App = RIO Config
 
@@ -35,36 +35,39 @@ data Config = Config
 
 class HasConnectionPool env where
   getConnectionPool :: env -> ConnectionPool
+
 instance HasConnectionPool Config where
   getConnectionPool = connectionPool
 
 class HasAppHostName env where
   getAppHostName :: env -> Text
+
 instance HasAppHostName Config where
   getAppHostName = appHostName
 
 instance HasLogFunc Config where
-  logFuncL = lens logFunc (\c f -> c { logFunc = f })
+  logFuncL = lens logFunc (\c f -> c {logFunc = f})
 
-makeConfig :: Environment -> IO Config 
+makeConfig :: Environment -> IO Config
 makeConfig environment = do
   postgresPass <- getEnv "POSTGRES_PASSWORD"
   pool' <- makePool postgresPass
   logOptions' <- logOptionsHandle stdout False
   let logOptions = setLogUseTime True logOptions'
   withLogFunc logOptions $ \logFunc' ->
-    return Config { 
-        connectionPool = pool'
-      , connectionString = connectionString' postgresPass
-      , appPort = 8080
-      , appHostName = hostName'
-      , dbPort = dbPort'
-      , dbUser = dbUser'
-      , dbName = dbName'
-      , dbHostName = dbHostName'
-      , deployHostName = hostName'
-      , logFunc = logFunc' 
-      }
+    return
+      Config
+        { connectionPool = pool'
+        , connectionString = connectionString' postgresPass
+        , appPort = 8080
+        , appHostName = hostName'
+        , dbPort = dbPort'
+        , dbUser = dbUser'
+        , dbName = dbName'
+        , dbHostName = dbHostName'
+        , deployHostName = hostName'
+        , logFunc = logFunc'
+        }
   where
     hostName'
       | environment == Local = "http://localhost:8080/"
@@ -74,33 +77,38 @@ makeConfig environment = do
     dbName' = "someapi"
     dbHostName' = "postgres-server.internal"
     makePool :: String -> IO ConnectionPool
-    makePool pass = 
+    makePool pass =
       runStdoutLoggingT $ createPostgresqlPool (connectionString' pass) 2
     connectionString' :: String -> ConnectionString
-    connectionString' pass = 
-       "host=" <> LC.pack dbHostName'
-       <> " port=" <> LC.pack dbPort'
-       <> " user=" <> LC.pack dbUser'
-       <> " dbname=" <> LC.pack dbName'
-       <> " password=" <> LC.pack pass
+    connectionString' pass =
+      "host=" <> LC.pack dbHostName'
+        <> " port="
+        <> LC.pack dbPort'
+        <> " user="
+        <> LC.pack dbUser'
+        <> " dbname="
+        <> LC.pack dbName'
+        <> " password="
+        <> LC.pack pass
 
 class Monad m => GetTime m where
   getTime :: m UTCTime
+
 instance GetTime App where
   getTime = liftIO getCurrentTime
 
 class Monad m => GetEnv m where
   getEnv' :: String -> m String
+
 instance GetEnv App where
   getEnv' var = liftIO $ getEnv var
 
-data Environment =
-    Local
+data Environment
+  = Local
   | FlyProduction
   deriving (Eq, Show)
 
-data CommandOptions =
-  Options {
-    localRun :: Bool
+data CommandOptions = Options
+  { localRun :: Bool
   , writeDocs :: Bool
   }

@@ -1,27 +1,52 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
-{-# LANGUAGE ConstraintKinds #-}
 
-module Web.Email
-  ( Sendmail
-  , sendActivationLink
-  ) where
+module Web.Email (
+  Sendmail,
+  sendActivationLink,
+) where
 
+import App (
+  App,
+  GetEnv (..),
+  GetTime (..),
+  HasAppHostName (..),
+ )
+import Network.Mail.Mime (
+  Mail,
+  htmlPart,
+  plainPart,
+ )
+import Network.Mail.SMTP hiding (
+  htmlPart,
+  sendMail,
+ )
+import Parse.UserTypes (
+  renderEmail,
+  renderName,
+ )
 import RIO hiding (to)
-import qualified RIO.Text.Lazy as TL
 import qualified RIO.HashMap as HashMap
 import RIO.Text (pack)
+import qualified RIO.Text.Lazy as TL
 import Text.Ginger (
-  Template, SourcePos, GVal, ToGVal, IncludeResolver, toGVal, makeContextHtml, runGinger, parseGinger)
+  GVal,
+  IncludeResolver,
+  SourcePos,
+  Template,
+  ToGVal,
+  makeContextHtml,
+  parseGinger,
+  runGinger,
+  toGVal,
+ )
 import Text.Ginger.Html (htmlSource)
-import Network.Mail.SMTP hiding (htmlPart, sendMail)
-import Network.Mail.Mime (Mail, htmlPart, plainPart)
+import Web.JWT (MakeUserToken (..))
 import Web.Model (User)
-import Web.JWT (MakeUserToken(..))
-import Parse.UserTypes (renderEmail, renderName)
-import App (App, HasAppHostName(..), GetTime(..), GetEnv(..))
 
 class Monad m => SendMail m where
   sendMail :: String -> UserName -> Password -> Mail -> m ()
+
 instance SendMail App where
   sendMail hostName userName pass mail = liftIO $ sendMailWithLoginTLS hostName userName pass mail
 
@@ -44,13 +69,13 @@ sendActivationLink user = do
       mail = simpleMail (from googleMail') to cc bcc subject [body, urlHtml]
   sendMail host googleMail googlePass mail
   where
-    host       = "smtp.gmail.com"
-    from       = Address Nothing
-    to         = [Address (Just (renderName user.userName)) (renderEmail user.userEmail)]
-    cc         = []
-    bcc        = []
-    subject    = "SomeAPI Account Activation"
-    body       = plainPart ""
+    host = "smtp.gmail.com"
+    from = Address Nothing
+    to = [Address (Just (renderName user.userName)) (renderEmail user.userEmail)]
+    cc = []
+    bcc = []
+    subject = "SomeAPI Account Activation"
+    body = plainPart ""
     urlText token appHostName' =
       case decodeUtf8' token of
         Left _err -> error "Utf8 decoding error"
@@ -70,12 +95,12 @@ renderTokenTemplate template contextMap =
 tokenTemplate :: Template SourcePos
 tokenTemplate =
   either (error . show) id . runIdentity $ parseGinger nullResolver Nothing form
-    where
-      form = 
-        "<form method=post action={{ appHostName }}" ++ "activate>" ++
-           "<input type=hidden name=token value={{ token }}>" ++
-           "<button type=submit\">Activate</button>" ++
-        "</form>"
+  where
+    form =
+      "<form method=post action={{ appHostName }}" ++ "activate>"
+        ++ "<input type=hidden name=token value={{ token }}>"
+        ++ "<button type=submit\">Activate</button>"
+        ++ "</form>"
 
 context :: Text -> Text -> HashMap Text Text
 context token host = HashMap.fromList [("token", token), ("appHostName", host)]
