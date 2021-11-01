@@ -34,7 +34,7 @@ import qualified Database.Persist.TH as PTH
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Char (isDigit)
 import Parse.UserTypes (Name, makeName)
-import Parse.Validation (VError(..))
+import Parse.Validation (VError(..), throwError)
 import App (App, GetTime(..))
 
 newtype NoteTitle = NoteTitle Text deriving (Eq, Show, Read, Generic)
@@ -99,10 +99,7 @@ PTH.derivePersistField "Date"
 class Monad m => MakeValidName m where
   makeValidName :: Text -> m Name
 instance MakeValidName App where
-  makeValidName name =
-    case makeName name of
-      Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-      Success name' -> return name'
+  makeValidName name = checkSuccess makeName name (\err -> throwError err400 { errBody = LB.fromString $ show err }) return
 
 class Monad m => MakeValidDate m where
   makeValidDate :: Either Text DateInput -> m Text
@@ -112,17 +109,12 @@ instance MakeValidDate App where
       Left dateText -> makeValidDate' validateDate dateText
       Right dateInput -> makeValidDate' validateDate' dateInput
     where
-      makeValidDate' f date =
-        case f date of
-          Failure err -> throwIO err400 { errBody = LB.fromString $ show err }
-          Success vDate -> return vDate
+      makeValidDate' f date = checkSuccess f date (\err -> throwError err400 { errBody = LB.fromString $ show err }) return
 
 validateDate' :: DateInput -> Validation [VError] Text
 validateDate' DateInput {..} =
   let date = Date <$> makeYear dateYear <*> makeMonth dateMonth <*> makeDayField dateDay
-   in case date of
-     Failure err -> Failure err
-     Success vDate -> Success $ T.pack $ show vDate
+   in checkSuccess id date Failure (Success . T.pack . show)
 
 validateDate :: Text -> Validation [VError] Text
 validateDate = validateDate' . makeDateInputFromText
@@ -134,6 +126,12 @@ validateDate = validateDate' . makeDateInputFromText
         month = readMaybe $ takeWhile isDigit $ drop 5 dateParam' :: Maybe Int
         date = readMaybe $ takeWhile isDigit $ drop 1 $ dropWhile isDigit $ drop 5 dateParam' :: Maybe Int
         dateParam' = T.unpack dateParam
+
+checkSuccess :: (a -> Validation f s) -> a -> (f -> r) -> (s -> r) -> r
+checkSuccess f x failure success =
+  case f x of
+    Failure err -> failure err
+    Success res -> success res
 
 makeBody :: Text -> Validation [VError] NoteBody
 makeBody body
