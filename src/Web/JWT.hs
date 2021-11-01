@@ -98,10 +98,10 @@ class Monad m => MakeAuthToken m where
   makeAuthToken :: Scope -> UTCTime -> m ByteString
 instance MakeAuthToken App where
   makeAuthToken scope time = liftIO $ makeAuthToken' scope time
-
-makeAuthToken' :: Scope -> UTCTime -> IO ByteString
-makeAuthToken' Scope {..} = makeToken claims 900
-  where claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
+    where
+      makeAuthToken' :: Scope -> UTCTime -> IO ByteString
+      makeAuthToken' Scope {..} = makeToken claims 900
+        where claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
 
 makeToken :: (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>
   a -> NominalDiffTime -> UTCTime -> IO ByteString
