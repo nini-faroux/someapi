@@ -23,8 +23,8 @@ import Database.Esqueleto.Experimental (
   fromSqlKey,
  )
 import Parse.Authenticate (
-  NameExists (..),
   Password (..),
+  WithName (..),
   checkPassword',
   checkUserCredentials,
   getAuth,
@@ -33,7 +33,6 @@ import Parse.Authenticate (
 import Parse.NoteTypes (
   NoteRequest (..),
   ValidDate (..),
-  ValidName (..),
   makeDateInput,
  )
 import Parse.NoteValidation (parseNote)
@@ -156,9 +155,8 @@ loginUser ::
   ( AuthToken m
   , Database env m
   , GetTime m
-  , NameExists m
   , ThrowError m
-  , ValidName m
+  , WithName m
   ) =>
   UserLogin ->
   m Token
@@ -182,9 +180,8 @@ createNote ::
   ( AuthToken m
   , Database env m
   , GetTime m
-  , NameExists m
   , ThrowError m
-  , ValidName m
+  , WithName m
   ) =>
   NoteInput ->
   Maybe Token ->
@@ -247,10 +244,9 @@ getNotesByName ::
   ( AuthToken m
   , Database env m
   , GetTime m
-  , NameExists m
   , ThrowError m
   , ValidDate m
-  , ValidName m
+  , WithName m
   ) =>
   Text ->
   Maybe Text ->

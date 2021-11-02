@@ -10,7 +10,6 @@ module Parse.NoteTypes (
   NoteRequest (..),
   NoteTitle,
   ValidDate (..),
-  ValidName (..),
   Year,
   dateSample,
   makeBody,
@@ -37,10 +36,6 @@ import Data.Char (isDigit)
 import qualified Data.Text as T
 import Data.Validation (Validation (..))
 import qualified Database.Persist.TH as PTH
-import Parse.UserTypes (
-  Name,
-  makeName,
- )
 import Parse.Validation (
   VError (..),
   throwError,
@@ -131,12 +126,6 @@ PTH.derivePersistField "NoteTitle"
 PTH.derivePersistField "NoteBody"
 
 PTH.derivePersistField "Date"
-
-class Monad m => ValidName m where
-  makeValidName :: Text -> m Name
-
-instance ValidName App where
-  makeValidName name = checkSuccess makeName name (\err -> throwError err400 {errBody = LB.fromString $ show err}) return
 
 class Monad m => ValidDate m where
   makeValidDate :: Either Text DateInput -> m Text

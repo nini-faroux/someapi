@@ -1,6 +1,6 @@
 module Parse.Authenticate (
   Password (..),
-  NameExists (..),
+  WithName (..),
   checkUserCredentials,
   checkPassword',
   getAuth,
@@ -20,9 +20,9 @@ import Data.Password.Bcrypt (
   hashPassword,
   mkPassword,
  )
+import Data.Validation (Validation (..))
 import Database.Esqueleto.Experimental (Entity (..))
-import Parse.NoteTypes (ValidName (..))
-import Parse.UserTypes (Name)
+import Parse.UserTypes (Name, makeName)
 import Parse.Validation (ThrowError (..))
 import RIO
 import Servant (
@@ -40,6 +40,22 @@ import Web.Model (Auth (..))
 import Web.Query (Database)
 import qualified Web.Query as Query
 
+class Monad m => WithName m where
+  makeValidName :: Text -> m Name
+  checkNameExists :: Name -> m Name
+
+instance WithName App where
+  makeValidName name =
+    case makeName name of
+      Failure err -> throwError err400 {errBody = LB.fromString $ show err}
+      Success name' -> return name'
+
+  checkNameExists name = do
+    mUser <- Query.getUserByName name
+    case mUser of
+      Nothing -> throwIO err404 {errBody = "User not found"}
+      Just _user -> return name
+
 makeAuthToken' ::
   ( AuthToken m
   , GetTime m
@@ -56,8 +72,7 @@ makeAuthToken' existingName = do
 
 checkUserCredentials ::
   ( AuthToken m
-  , NameExists m
-  , ValidName m
+  , WithName m
   ) =>
   Maybe Token ->
   Text ->
@@ -67,16 +82,6 @@ checkUserCredentials mToken author = do
   name <- makeValidName author
   existingName <- checkNameExists name
   return (existingName, scope)
-
-class Monad m => NameExists m where
-  checkNameExists :: Name -> m Name
-
-instance NameExists App where
-  checkNameExists name = do
-    mUser <- Query.getUserByName name
-    case mUser of
-      Nothing -> throwIO err404 {errBody = "User not found"}
-      Just _user -> return name
 
 class Monad m => Password m where
   makePassword :: Text -> m (PasswordHash Bcrypt)
