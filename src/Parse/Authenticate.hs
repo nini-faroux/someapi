@@ -53,7 +53,7 @@ instance WithName App where
   checkNameExists name = do
     mUser <- Query.getUserByName name
     case mUser of
-      Nothing -> throwIO err404 {errBody = "User not found"}
+      Nothing -> throwError err404 {errBody = "User not found"}
       Just _user -> return name
 
 makeAuthToken' ::

@@ -28,6 +28,7 @@ import Parse.UserTypes (
   Email,
   Name,
  )
+import Parse.Validation (throwError)
 import RIO
 import RIO.Time (
   NominalDiffTime,
@@ -90,7 +91,7 @@ instance UserToken App where
   verifyUserToken token = do
     eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
     case eUser of
-      Left err -> throwIO err400 {errBody = LB.fromString err}
+      Left err -> throwError err400 {errBody = LB.fromString err}
       Right user -> return user
 
 class Monad m => AuthToken m where
@@ -98,11 +99,11 @@ class Monad m => AuthToken m where
   makeAuthToken :: Scope -> UTCTime -> m ByteString
 
 instance AuthToken App where
-  verifyAuthToken Nothing = throwIO err400 {errBody = "Token Missing"}
+  verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
     eScope <- decodeToken token
     case eScope of
-      Left err -> throwIO err400 {errBody = LB.fromString err}
+      Left err -> throwError err400 {errBody = LB.fromString err}
       Right scope -> return scope
     where
       -- Need to trim the token to account for the 'Bearer' prefix

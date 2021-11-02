@@ -9,8 +9,8 @@ module Web.Email (
 import App (
   App,
   GetEnv (..),
-  WithTime (..),
   HasAppHostName (..),
+  WithTime (..),
  )
 import Network.Mail.Mime (
   Mail,
