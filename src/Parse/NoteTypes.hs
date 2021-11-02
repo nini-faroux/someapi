@@ -5,12 +5,12 @@ module Parse.NoteTypes (
   Date,
   DateField,
   DateInput (..),
-  MakeValidDate (..),
-  MakeValidName (..),
   Month,
   NoteBody,
   NoteRequest (..),
   NoteTitle,
+  ValidDate (..),
+  ValidName (..),
   Year,
   dateSample,
   makeBody,
@@ -132,16 +132,16 @@ PTH.derivePersistField "NoteBody"
 
 PTH.derivePersistField "Date"
 
-class Monad m => MakeValidName m where
+class Monad m => ValidName m where
   makeValidName :: Text -> m Name
 
-instance MakeValidName App where
+instance ValidName App where
   makeValidName name = checkSuccess makeName name (\err -> throwError err400 {errBody = LB.fromString $ show err}) return
 
-class Monad m => MakeValidDate m where
+class Monad m => ValidDate m where
   makeValidDate :: Either Text DateInput -> m Text
 
-instance MakeValidDate App where
+instance ValidDate App where
   makeValidDate eDate =
     case eDate of
       Left dateText -> makeValidDate' validateDate dateText

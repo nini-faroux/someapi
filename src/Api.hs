@@ -23,17 +23,17 @@ import Database.Esqueleto.Experimental (
   fromSqlKey,
  )
 import Parse.Authenticate (
-  MakePassword (..),
   NameExists (..),
+  Password (..),
   checkPassword',
   checkUserCredentials,
   getAuth,
   makeAuthToken',
  )
 import Parse.NoteTypes (
-  MakeValidDate (..),
-  MakeValidName (..),
   NoteRequest (..),
+  ValidDate (..),
+  ValidName (..),
   makeDateInput,
  )
 import Parse.NoteValidation (parseNote)
@@ -58,7 +58,6 @@ import Web.JWT (
   AuthToken (..),
   Scope (..),
   Token (..),
-  AuthToken (..),
   UserToken (..),
  )
 import Web.Model (
@@ -129,7 +128,7 @@ noteApi = Proxy
 -}
 createUser ::
   ( Database env m
-  , MakePassword m
+  , Password m
   , Sendmail env m
   , ThrowError m
   ) =>
@@ -157,9 +156,9 @@ loginUser ::
   ( AuthToken m
   , Database env m
   , GetTime m
-  , MakeValidName m
   , NameExists m
   , ThrowError m
+  , ValidName m
   ) =>
   UserLogin ->
   m Token
@@ -180,12 +179,12 @@ loginUser UserLogin {..} = do
  -d '{ "noteAuthor" : "<your userName>", "noteTitle" : "some title", "noteBody": "do something good"}'
 -}
 createNote ::
-  ( Database env m
+  ( AuthToken m
+  , Database env m
   , GetTime m
-  , MakeValidName m
   , NameExists m
   , ThrowError m
-  , AuthToken m
+  , ValidName m
   ) =>
   NoteInput ->
   Maybe Token ->
@@ -214,11 +213,11 @@ createNote note@NoteInput {..} mToken = do
  Example: /notes?end=2021-10-6
 -}
 getNotes ::
-  ( Database env m
+  ( AuthToken m
+  , Database env m
   , GetTime m
-  , MakeValidDate m
   , ThrowError m
-  , AuthToken m
+  , ValidDate m
   ) =>
   Maybe Text ->
   Maybe Text ->
@@ -245,13 +244,13 @@ getNotes mStartDate mEndDate mToken = do
  /notes/<authorName>?end=2021-10-6
 -}
 getNotesByName ::
-  ( Database env m
+  ( AuthToken m
+  , Database env m
   , GetTime m
-  , MakeValidDate m
-  , MakeValidName m
   , NameExists m
   , ThrowError m
-  , AuthToken m
+  , ValidDate m
+  , ValidName m
   ) =>
   Text ->
   Maybe Text ->
@@ -301,8 +300,8 @@ notesRequest query mName requestType Scope {..}
 getNotesBetweenDates ::
   ( Database env m
   , GetTime m
-  , MakeValidDate m
   , ThrowError m
+  , ValidDate m
   ) =>
   Maybe Name ->
   Maybe Text ->
@@ -326,7 +325,7 @@ getNotesBetweenDates mName Nothing (Just endDate) = do
       end <- makeValidDate $ Left endDate
       makeQuery mName start end
 
-getStartAndEndParams :: (MakeValidDate m) => Text -> Text -> m (Text, Text)
+getStartAndEndParams :: (ValidDate m) => Text -> Text -> m (Text, Text)
 getStartAndEndParams start end =
   makeValidDate (Left start) >>= \s -> makeValidDate (Left end) >>= \e -> return (s, e)
 

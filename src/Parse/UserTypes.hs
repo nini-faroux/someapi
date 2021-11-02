@@ -13,7 +13,7 @@ module Parse.UserTypes (
   renderEmail,
   renderName,
   validActivation,
-  validPassword
+  validPassword,
 ) where
 
 import Data.Aeson (

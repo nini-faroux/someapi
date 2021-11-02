@@ -1,10 +1,10 @@
 module Parse.Authenticate (
-  MakePassword (..),
+  Password (..),
   NameExists (..),
   checkUserCredentials,
   checkPassword',
   getAuth,
-  makeAuthToken'
+  makeAuthToken',
 ) where
 
 import App (
@@ -21,7 +21,7 @@ import Data.Password.Bcrypt (
   mkPassword,
  )
 import Database.Esqueleto.Experimental (Entity (..))
-import Parse.NoteTypes (MakeValidName (..))
+import Parse.NoteTypes (ValidName (..))
 import Parse.UserTypes (Name)
 import Parse.Validation (ThrowError (..))
 import RIO
@@ -42,7 +42,6 @@ import qualified Web.Query as Query
 
 makeAuthToken' ::
   ( AuthToken m
-  , Database env m
   , GetTime m
   , ThrowError m
   ) =>
@@ -57,8 +56,8 @@ makeAuthToken' existingName = do
 
 checkUserCredentials ::
   ( AuthToken m
-  , MakeValidName m
   , NameExists m
+  , ValidName m
   ) =>
   Maybe Token ->
   Text ->
@@ -79,10 +78,10 @@ instance NameExists App where
       Nothing -> throwIO err404 {errBody = "User not found"}
       Just _user -> return name
 
-class Monad m => MakePassword m where
+class Monad m => Password m where
   makePassword :: Text -> m (PasswordHash Bcrypt)
 
-instance MakePassword App where
+instance Password App where
   makePassword txt = liftIO $ hashPassword $ mkPassword txt
 
 checkPassword' ::
