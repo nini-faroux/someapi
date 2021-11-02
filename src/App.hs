@@ -1,12 +1,12 @@
 module App (
   App,
+  CommandOptions (..),
   Config (..),
   Environment (..),
-  CommandOptions (..),
-  HasConnectionPool (..),
-  HasAppHostName (..),
-  GetTime (..),
   GetEnv (..),
+  GetTime (..),
+  HasAppHostName (..),
+  HasConnectionPool (..),
   makeConfig,
 ) where
 

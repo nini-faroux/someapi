@@ -7,10 +7,10 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Web.JWT (
-  Scope (..),
-  Token (..),
   MakeAuthToken (..),
   MakeUserToken (..),
+  Scope (..),
+  Token (..),
   VerifyAuthToken (..),
   VerifyUserToken (..),
 ) where

@@ -1,6 +1,6 @@
 module Parse.Validation (
-  VError (..),
   ThrowError (..),
+  VError (..),
 ) where
 
 import App (App)

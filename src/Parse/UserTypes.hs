@@ -3,17 +3,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Parse.UserTypes (
-  Name,
   Email,
-  makeName,
+  Name,
+  emailSample,
   makeEmail,
-  validActivation,
-  validPassword,
-  renderName,
-  renderEmail,
+  makeName,
   nameSample,
   nameSample2,
-  emailSample,
+  renderEmail,
+  renderName,
+  validActivation,
+  validPassword
 ) where
 
 import Data.Aeson (

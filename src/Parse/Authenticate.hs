@@ -1,10 +1,10 @@
 module Parse.Authenticate (
-  makeAuthToken',
+  MakePassword (..),
+  NameExists (..),
   checkUserCredentials,
-  CheckNameExists (..),
   checkPassword',
   getAuth,
-  MakePassword (..),
+  makeAuthToken'
 ) where
 
 import App (
@@ -57,7 +57,7 @@ makeAuthToken' existingName = do
     Right token' -> return $ Token token'
 
 checkUserCredentials ::
-  ( CheckNameExists m
+  ( NameExists m
   , MakeValidName m
   , VerifyAuthToken m
   ) =>
@@ -70,10 +70,10 @@ checkUserCredentials mToken author = do
   existingName <- checkNameExists name
   return (existingName, scope)
 
-class Monad m => CheckNameExists m where
+class Monad m => NameExists m where
   checkNameExists :: Name -> m Name
 
-instance CheckNameExists App where
+instance NameExists App where
   checkNameExists name = do
     mUser <- Query.getUserByName name
     case mUser of

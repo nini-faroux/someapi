@@ -8,16 +8,16 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
 module Web.Model (
-  User (..),
-  UserWithPassword (..),
-  UserLogin (..),
-  Note (..),
-  NoteInput (..),
   Auth (..),
+  Database,
   EntityField (..),
   Key (..),
+  Note (..),
+  NoteInput (..),
   RunPool (..),
-  Database,
+  User (..),
+  UserLogin (..),
+  UserWithPassword (..),
   runDB,
   runMigrations,
 ) where

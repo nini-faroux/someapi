@@ -1,19 +1,19 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
 module Api (
-  NoteAPI,
-  CreateUser,
   CreateNote,
+  CreateUser,
   GetNotes,
   GetNotesByName,
   LoginUser,
-  noteApi,
-  createUser,
-  loginUser,
+  NoteAPI,
   activateUserAccount,
-  getNotes,
   createNote,
+  createUser,
+  getNotes,
   getNotesByName,
+  noteApi,
+  loginUser,
 ) where
 
 import App (GetTime (..))
@@ -23,8 +23,8 @@ import Database.Esqueleto.Experimental (
   fromSqlKey,
  )
 import Parse.Authenticate (
-  CheckNameExists (..),
   MakePassword (..),
+  NameExists (..),
   checkPassword',
   checkUserCredentials,
   getAuth,
@@ -154,11 +154,11 @@ createUser uwp@UserWithPassword {..} = do
  -d '{ "loginName": "<userName>", "loginPassword": "password"}'
 -}
 loginUser ::
-  ( CheckNameExists m
-  , Database env m
+  ( Database env m
   , GetTime m
   , MakeAuthToken m
   , MakeValidName m
+  , NameExists m
   , ThrowError m
   ) =>
   UserLogin ->
@@ -180,10 +180,10 @@ loginUser UserLogin {..} = do
  -d '{ "noteAuthor" : "<your userName>", "noteTitle" : "some title", "noteBody": "do something good"}'
 -}
 createNote ::
-  ( CheckNameExists m
-  , Database env m
+  ( Database env m
   , GetTime m
   , MakeValidName m
+  , NameExists m
   , ThrowError m
   , VerifyAuthToken m
   ) =>
@@ -245,11 +245,11 @@ getNotes mStartDate mEndDate mToken = do
  /notes/<authorName>?end=2021-10-6
 -}
 getNotesByName ::
-  ( CheckNameExists m
-  , Database env m
+  ( Database env m
   , GetTime m
   , MakeValidDate m
   , MakeValidName m
+  , NameExists m
   , ThrowError m
   , VerifyAuthToken m
   ) =>
