@@ -32,19 +32,18 @@ import Servant (
   errBody,
  )
 import Web.JWT (
-  MakeAuthToken (..),
+  AuthToken (..),
   Scope (..),
   Token (..),
-  VerifyAuthToken (..),
  )
 import Web.Model (Auth (..))
 import Web.Query (Database)
 import qualified Web.Query as Query
 
 makeAuthToken' ::
-  ( Database env m
+  ( AuthToken m
+  , Database env m
   , GetTime m
-  , MakeAuthToken m
   , ThrowError m
   ) =>
   Name ->
@@ -57,9 +56,9 @@ makeAuthToken' existingName = do
     Right token' -> return $ Token token'
 
 checkUserCredentials ::
-  ( NameExists m
+  ( AuthToken m
   , MakeValidName m
-  , VerifyAuthToken m
+  , NameExists m
   ) =>
   Maybe Token ->
   Text ->

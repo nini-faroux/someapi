@@ -7,12 +7,10 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Web.JWT (
-  MakeAuthToken (..),
-  MakeUserToken (..),
+  AuthToken (..),
   Scope (..),
   Token (..),
-  VerifyAuthToken (..),
-  VerifyUserToken (..),
+  UserToken (..),
 ) where
 
 import App (App)
@@ -73,20 +71,33 @@ instance FromJSON Token
 
 instance ToJSON Token
 
-class Monad m => VerifyUserToken m where
+class Monad m => UserToken m where
+  makeUserToken :: User -> UTCTime -> m ByteString
   verifyUserToken :: Text -> m User
 
-instance VerifyUserToken App where
+instance UserToken App where
+  makeUserToken user time = liftIO $ makeUserToken' user time
+    where
+      makeUserToken' :: User -> UTCTime -> IO ByteString
+      makeUserToken' User {..} = makeToken claims 7200
+        where
+          claims =
+            ( #userName ->> userName
+            , #userEmail ->> userEmail
+            , #userActivated ->> userActivated
+            )
+
   verifyUserToken token = do
     eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
     case eUser of
       Left err -> throwIO err400 {errBody = LB.fromString err}
       Right user -> return user
 
-class Monad m => VerifyAuthToken m where
+class Monad m => AuthToken m where
   verifyAuthToken :: Maybe Token -> m Scope
+  makeAuthToken :: Scope -> UTCTime -> m ByteString
 
-instance VerifyAuthToken App where
+instance AuthToken App where
   verifyAuthToken Nothing = throwIO err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
     eScope <- decodeToken token
@@ -101,25 +112,6 @@ instance VerifyAuthToken App where
         | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
-class Monad m => MakeUserToken m where
-  makeUserToken :: User -> UTCTime -> m ByteString
-
-instance MakeUserToken App where
-  makeUserToken user time = liftIO $ makeUserToken' user time
-
-makeUserToken' :: User -> UTCTime -> IO ByteString
-makeUserToken' User {..} = makeToken claims 7200
-  where
-    claims =
-      ( #userName ->> userName
-      , #userEmail ->> userEmail
-      , #userActivated ->> userActivated
-      )
-
-class Monad m => MakeAuthToken m where
-  makeAuthToken :: Scope -> UTCTime -> m ByteString
-
-instance MakeAuthToken App where
   makeAuthToken scope time = liftIO $ makeAuthToken' scope time
     where
       makeAuthToken' :: Scope -> UTCTime -> IO ByteString

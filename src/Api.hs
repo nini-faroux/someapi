@@ -55,11 +55,11 @@ import Web.Email (
   sendActivationLink,
  )
 import Web.JWT (
-  MakeAuthToken (..),
+  AuthToken (..),
   Scope (..),
   Token (..),
-  VerifyAuthToken (..),
-  VerifyUserToken (..),
+  AuthToken (..),
+  UserToken (..),
  )
 import Web.Model (
   Database,
@@ -154,9 +154,9 @@ createUser uwp@UserWithPassword {..} = do
  -d '{ "loginName": "<userName>", "loginPassword": "password"}'
 -}
 loginUser ::
-  ( Database env m
+  ( AuthToken m
+  , Database env m
   , GetTime m
-  , MakeAuthToken m
   , MakeValidName m
   , NameExists m
   , ThrowError m
@@ -185,7 +185,7 @@ createNote ::
   , MakeValidName m
   , NameExists m
   , ThrowError m
-  , VerifyAuthToken m
+  , AuthToken m
   ) =>
   NoteInput ->
   Maybe Token ->
@@ -218,7 +218,7 @@ getNotes ::
   , GetTime m
   , MakeValidDate m
   , ThrowError m
-  , VerifyAuthToken m
+  , AuthToken m
   ) =>
   Maybe Text ->
   Maybe Text ->
@@ -251,7 +251,7 @@ getNotesByName ::
   , MakeValidName m
   , NameExists m
   , ThrowError m
-  , VerifyAuthToken m
+  , AuthToken m
   ) =>
   Text ->
   Maybe Text ->
@@ -272,7 +272,7 @@ getNotesByName noteAuthor mStart mEnd mToken = do
 -}
 activateUserAccount ::
   ( Database env m
-  , VerifyUserToken m
+  , UserToken m
   ) =>
   MultipartData Mem ->
   m (Maybe (Entity User))
