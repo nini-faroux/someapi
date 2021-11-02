@@ -16,7 +16,7 @@ module Api (
   loginUser,
 ) where
 
-import App (GetTime (..))
+import App (WithTime (..))
 import Database.Esqueleto.Experimental (
   Entity (..),
   Key,
@@ -32,13 +32,13 @@ import Parse.Authenticate (
  )
 import Parse.NoteTypes (
   NoteRequest (..),
-  ValidDate (..),
+  WithDate (..),
   makeDateInput,
  )
 import Parse.NoteValidation (parseNote)
 import Parse.UserTypes (Name)
 import Parse.UserValidation (parseUser)
-import Parse.Validation (ThrowError (..))
+import Parse.Validation (Error (..))
 import RIO
 import RIO.List (headMaybe)
 import Servant hiding (throwError)
@@ -127,9 +127,9 @@ noteApi = Proxy
 -}
 createUser ::
   ( Database env m
+  , Error m
   , Password m
   , Sendmail env m
-  , ThrowError m
   ) =>
   UserWithPassword ->
   m Int64
@@ -154,9 +154,9 @@ createUser uwp@UserWithPassword {..} = do
 loginUser ::
   ( AuthToken m
   , Database env m
-  , GetTime m
-  , ThrowError m
+  , Error m
   , WithName m
+  , WithTime m
   ) =>
   UserLogin ->
   m Token
@@ -179,9 +179,9 @@ loginUser UserLogin {..} = do
 createNote ::
   ( AuthToken m
   , Database env m
-  , GetTime m
-  , ThrowError m
+  , Error m
   , WithName m
+  , WithTime m
   ) =>
   NoteInput ->
   Maybe Token ->
@@ -212,9 +212,9 @@ createNote note@NoteInput {..} mToken = do
 getNotes ::
   ( AuthToken m
   , Database env m
-  , GetTime m
-  , ThrowError m
-  , ValidDate m
+  , Error m
+  , WithDate m
+  , WithTime m
   ) =>
   Maybe Text ->
   Maybe Text ->
@@ -243,10 +243,10 @@ getNotes mStartDate mEndDate mToken = do
 getNotesByName ::
   ( AuthToken m
   , Database env m
-  , GetTime m
-  , ThrowError m
-  , ValidDate m
+  , Error m
+  , WithDate m
   , WithName m
+  , WithTime m
   ) =>
   Text ->
   Maybe Text ->
@@ -282,7 +282,7 @@ activateUserAccount formData = do
         nameValuePairs = inputs formData'
         token = maybe "" iValue $ headMaybe nameValuePairs
 
-notesRequest :: (ThrowError m) => m a -> Maybe Name -> NoteRequest -> Scope -> m a
+notesRequest :: (Error m) => m a -> Maybe Name -> NoteRequest -> Scope -> m a
 notesRequest query mName requestType Scope {..}
   | not protectedAccess = throwError err403 {errBody = "Not Authorised"}
   | requestType == GetNoteRequest = query
@@ -295,9 +295,9 @@ notesRequest query mName requestType Scope {..}
 
 getNotesBetweenDates ::
   ( Database env m
-  , GetTime m
-  , ThrowError m
-  , ValidDate m
+  , Error m
+  , WithDate m
+  , WithTime m
   ) =>
   Maybe Name ->
   Maybe Text ->
@@ -310,7 +310,7 @@ getNotesBetweenDates mName (Just startDate) (Just endDate) = do
   makeQuery mName start end
 getNotesBetweenDates mName (Just startDate) Nothing = do
   dayInput <- makeDateInput
-  end <- makeValidDate (Right dayInput)
+  end <- makeWithDate (Right dayInput)
   (start, end') <- getStartAndEndParams startDate end
   makeQuery mName start end'
 getNotesBetweenDates mName Nothing (Just endDate) = do
@@ -318,16 +318,16 @@ getNotesBetweenDates mName Nothing (Just endDate) = do
   case mStart of
     Nothing -> Query.getNotes
     Just start -> do
-      end <- makeValidDate $ Left endDate
+      end <- makeWithDate $ Left endDate
       makeQuery mName start end
 
-getStartAndEndParams :: (ValidDate m) => Text -> Text -> m (Text, Text)
+getStartAndEndParams :: (WithDate m) => Text -> Text -> m (Text, Text)
 getStartAndEndParams start end =
-  makeValidDate (Left start) >>= \s -> makeValidDate (Left end) >>= \e -> return (s, e)
+  makeWithDate (Left start) >>= \s -> makeWithDate (Left end) >>= \e -> return (s, e)
 
 makeQuery ::
   ( Database env m
-  , ThrowError m
+  , Error m
   ) =>
   Maybe Name ->
   Text ->

@@ -13,7 +13,7 @@ import Parse.UserTypes (
   validPassword,
  )
 import Parse.Validation (
-  ThrowError (..),
+  Error (..),
   VError (..),
  )
 import RIO
@@ -30,7 +30,7 @@ import qualified Web.Query as Query
 
 parseUser ::
   ( Database env m
-  , ThrowError m
+  , Error m
   ) =>
   UserWithPassword ->
   m User

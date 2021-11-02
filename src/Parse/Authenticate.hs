@@ -9,7 +9,7 @@ module Parse.Authenticate (
 
 import App (
   App,
-  GetTime (..),
+  WithTime (..),
  )
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Password.Bcrypt (
@@ -23,7 +23,7 @@ import Data.Password.Bcrypt (
 import Data.Validation (Validation (..))
 import Database.Esqueleto.Experimental (Entity (..))
 import Parse.UserTypes (Name, makeName)
-import Parse.Validation (ThrowError (..))
+import Parse.Validation (Error (..))
 import RIO
 import Servant (
   err400,
@@ -58,8 +58,8 @@ instance WithName App where
 
 makeAuthToken' ::
   ( AuthToken m
-  , GetTime m
-  , ThrowError m
+  , Error m
+  , WithTime m
   ) =>
   Name ->
   m Token
@@ -91,7 +91,7 @@ instance Password App where
 
 checkPassword' ::
   ( Database env m
-  , ThrowError m
+  , Error m
   ) =>
   Text ->
   PasswordHash Bcrypt ->
@@ -104,7 +104,7 @@ checkPassword' loginPassword hashPass = do
 
 getAuth ::
   ( Database env m
-  , ThrowError m
+  , Error m
   ) =>
   Name ->
   m (PasswordHash Bcrypt)

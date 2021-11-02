@@ -9,7 +9,7 @@ module Web.Email (
 import App (
   App,
   GetEnv (..),
-  GetTime (..),
+  WithTime (..),
   HasAppHostName (..),
  )
 import Network.Mail.Mime (
@@ -52,11 +52,11 @@ instance SendMail App where
 
 type Sendmail env m =
   ( GetEnv m
-  , GetTime m
   , HasAppHostName env
   , MonadReader env m
   , SendMail m
   , UserToken m
+  , WithTime m
   )
 
 sendActivationLink :: (Sendmail env m) => User -> m ()

@@ -2,7 +2,7 @@ module Parse.NoteValidation (
   parseNote,
 ) where
 
-import App (GetTime (..))
+import App (WithTime (..))
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation (..))
 import Parse.NoteTypes (
@@ -14,7 +14,7 @@ import Parse.NoteTypes (
  )
 import qualified Parse.UserTypes as UserTypes
 import Parse.Validation (
-  ThrowError (..),
+  Error (..),
   VError (..),
  )
 import RIO
@@ -32,8 +32,8 @@ import Web.Model (
  or returns the errors encountered
 -}
 parseNote ::
-  ( GetTime m
-  , ThrowError m
+  ( Error m
+  , WithTime m
   ) =>
   NoteInput ->
   m Note

@@ -4,7 +4,7 @@ module App (
   Config (..),
   Environment (..),
   GetEnv (..),
-  GetTime (..),
+  WithTime (..),
   HasAppHostName (..),
   HasConnectionPool (..),
   makeConfig,
@@ -91,10 +91,10 @@ makeConfig environment = do
         <> " password="
         <> LC.pack pass
 
-class Monad m => GetTime m where
+class Monad m => WithTime m where
   getTime :: m UTCTime
 
-instance GetTime App where
+instance WithTime App where
   getTime = liftIO getCurrentTime
 
 class Monad m => GetEnv m where

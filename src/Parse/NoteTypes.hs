@@ -9,7 +9,7 @@ module Parse.NoteTypes (
   NoteBody,
   NoteRequest (..),
   NoteTitle,
-  ValidDate (..),
+  WithDate (..),
   Year,
   dateSample,
   makeBody,
@@ -25,7 +25,7 @@ module Parse.NoteTypes (
 
 import App (
   App,
-  GetTime (..),
+  WithTime (..),
  )
 import Data.Aeson (
   FromJSON,
@@ -87,7 +87,7 @@ data DateInput = DateInput
   }
   deriving (Eq, Show, Generic)
 
-makeDateInput :: (GetTime m) => m DateInput
+makeDateInput :: (WithTime m) => m DateInput
 makeDateInput = do
   time <- getTime
   let (year, month, date) = toGregorian $ utctDay time
@@ -127,16 +127,16 @@ PTH.derivePersistField "NoteBody"
 
 PTH.derivePersistField "Date"
 
-class Monad m => ValidDate m where
-  makeValidDate :: Either Text DateInput -> m Text
+class Monad m => WithDate m where
+  makeWithDate :: Either Text DateInput -> m Text
 
-instance ValidDate App where
-  makeValidDate eDate =
+instance WithDate App where
+  makeWithDate eDate =
     case eDate of
-      Left dateText -> makeValidDate' validateDate dateText
-      Right dateInput -> makeValidDate' validateDate' dateInput
+      Left dateText -> makeWithDate' validateDate dateText
+      Right dateInput -> makeWithDate' validateDate' dateInput
     where
-      makeValidDate' f date = checkSuccess f date (\err -> throwError err400 {errBody = LB.fromString $ show err}) return
+      makeWithDate' f date = checkSuccess f date (\err -> throwError err400 {errBody = LB.fromString $ show err}) return
 
 validateDate' :: DateInput -> Validation [VError] Text
 validateDate' DateInput {..} =
