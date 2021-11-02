@@ -64,7 +64,8 @@ import Servant.Multipart (
  )
 import Servant.Swagger
 import Web.JWT (
-  Token (..),
+  Token,
+  tokenSample,
  )
 import Web.Model (
   Key (..),
@@ -214,9 +215,3 @@ userWPSample = UserWithPassword "nini" "nini@mail.com" "password"
 
 userLoginSample :: UserLogin
 userLoginSample = UserLogin "nini@mail.com" "password"
-
-tokenSample :: Token
-tokenSample = Token token'
-
-token' :: Text
-token' = "eyjhbgcioijiuzuxmiisinr5cci6ikpxvcj9.eyJhdWQiOlsic29tZWFwaSJdLCJleHAiOjE2MzE5NjU3MDcsImlhdCI6MTYzMTk2NDgwNywiaXNzIjoic29tZWFwaSIsInByaXZhdGUiOmZhbHNlLCJwcm90ZWN0ZWQiOnRydWV9.CTEFPu36V0NEHRkWL_IV4rJ4J87CL1Irac0Mn99x6lRslYvXLVDaabyDkhV_QqyOeAtq95x4hIAeSJIhE03hT"

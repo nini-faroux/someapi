@@ -9,11 +9,13 @@
 module Web.JWT (
   AuthToken (..),
   Scope (..),
-  Token (..),
+  Token,
   UserToken (..),
+  makeAuthToken',
+  tokenSample,
 ) where
 
-import App (App)
+import App (App, WithTime (..))
 import Control.Arrow (left)
 import Control.Monad.Time (MonadTime)
 import Data.Aeson (
@@ -28,7 +30,7 @@ import Parse.UserTypes (
   Email,
   Name,
  )
-import Parse.Validation (throwError)
+import Parse.Validation (Error (..))
 import RIO
 import RIO.Time (
   NominalDiffTime,
@@ -113,12 +115,26 @@ instance AuthToken App where
         | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
-  makeAuthToken scope time = liftIO $ makeAuthToken' scope time
+  makeAuthToken scope time = liftIO $ makeToken' scope time
     where
-      makeAuthToken' :: Scope -> UTCTime -> IO ByteString
-      makeAuthToken' Scope {..} = makeToken claims 900
+      makeToken' :: Scope -> UTCTime -> IO ByteString
+      makeToken' Scope {..} = makeToken claims 900
         where
           claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
+
+makeAuthToken' ::
+  ( AuthToken m
+  , Error m
+  , WithTime m
+  ) =>
+  Name ->
+  m Token
+makeAuthToken' existingName = do
+  now <- getTime
+  token <- makeAuthToken (Scope {protectedAccess = True, tokenUserName = existingName}) now
+  case decodeUtf8' token of
+    Left err -> throwError err400 {errBody = LB.fromString $ show err}
+    Right token' -> return $ Token token'
 
 makeToken ::
   (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>
@@ -178,3 +194,10 @@ decodeAndValidate token = do
   jwtFromByteString settings mempty hmac512' token
   where
     settings = Settings {leeway = 5, appName = Just "someapi"}
+
+-- | Export for docs
+tokenSample :: Token
+tokenSample = Token tokenText
+
+tokenText :: Text
+tokenText = "eyjhbgcioijiuzuxmiisinr5cci6ikpxvcj9.eyJhdWQiOlsic29tZWFwaSJdLCJleHAiOjE2MzE5NjU3MDcsImlhdCI6MTYzMTk2NDgwNywiaXNzIjoic29tZWFwaSIsInByaXZhdGUiOmZhbHNlLCJwcm90ZWN0ZWQiOnRydWV9.CTEFPu36V0NEHRkWL_IV4rJ4J87CL1Irac0Mn99x6lRslYvXLVDaabyDkhV_QqyOeAtq95x4hIAeSJIhE03hT"

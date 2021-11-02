@@ -4,12 +4,10 @@ module Parse.Authenticate (
   checkUserCredentials,
   checkPassword',
   getAuth,
-  makeAuthToken',
 ) where
 
 import App (
   App,
-  WithTime (..),
  )
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Password.Bcrypt (
@@ -33,8 +31,8 @@ import Servant (
  )
 import Web.JWT (
   AuthToken (..),
-  Scope (..),
-  Token (..),
+  Scope,
+  Token,
  )
 import Web.Model (Auth (..))
 import Web.Query (Database)
@@ -55,20 +53,6 @@ instance WithName App where
     case mUser of
       Nothing -> throwError err404 {errBody = "User not found"}
       Just _user -> return name
-
-makeAuthToken' ::
-  ( AuthToken m
-  , Error m
-  , WithTime m
-  ) =>
-  Name ->
-  m Token
-makeAuthToken' existingName = do
-  now <- getTime
-  token <- makeAuthToken (Scope {protectedAccess = True, tokenUserName = existingName}) now
-  case decodeUtf8' token of
-    Left err -> throwError err400 {errBody = LB.fromString $ show err}
-    Right token' -> return $ Token token'
 
 checkUserCredentials ::
   ( AuthToken m

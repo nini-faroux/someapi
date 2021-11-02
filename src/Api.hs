@@ -28,7 +28,6 @@ import Parse.Authenticate (
   checkPassword',
   checkUserCredentials,
   getAuth,
-  makeAuthToken',
  )
 import Parse.NoteTypes (
   NoteRequest (..),
@@ -56,8 +55,9 @@ import Web.Email (
 import Web.JWT (
   AuthToken (..),
   Scope (..),
-  Token (..),
+  Token,
   UserToken (..),
+  makeAuthToken',
  )
 import Web.Model (
   Database,
