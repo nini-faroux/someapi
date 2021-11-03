@@ -309,8 +309,8 @@ getNotesBetweenDates mName (Just startDate) (Just endDate) = do
   (start, end) <- getStartAndEndParams startDate endDate
   makeQuery mName start end
 getNotesBetweenDates mName (Just startDate) Nothing = do
-  dayInput <- makeDateInput
-  end <- makeWithDate (Right dayInput)
+  dateInput <- makeDateInput
+  end <- makeWithDate (Right dateInput)
   (start, end') <- getStartAndEndParams startDate end
   makeQuery mName start end'
 getNotesBetweenDates mName Nothing (Just endDate) = do
