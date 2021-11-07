@@ -73,7 +73,6 @@ makeConfig environment = do
   where
     hostName'
       | environment == Local = "http://localhost:8080/"
-      | environment == Test = "localhost"
       | otherwise = "https://some-api.fly.dev/"
     dbHostName' = "postgres-server.internal"
     dbPort' = "5432"
@@ -113,7 +112,6 @@ instance GetEnv App where
 data Environment
   = Local
   | FlyProduction
-  | Test
   deriving (Eq, Show)
 
 data CommandOptions = Options
