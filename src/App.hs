@@ -10,13 +10,13 @@ module App (
   makeConfig,
 ) where
 
+import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Monad.Logger (runStdoutLoggingT)
 import qualified Data.ByteString.Char8 as LC
 import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPostgresqlPool)
 import Network.Wai.Handler.Warp (Port)
 import RIO
 import RIO.Time (UTCTime, getCurrentTime)
-import Configuration.Dotenv (loadFile, defaultConfig)
 import System.Environment (getEnv)
 
 type App = RIO Config

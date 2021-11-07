@@ -16,6 +16,7 @@ module Web.JWT (
 ) where
 
 import App (App, WithTime (..))
+import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Arrow (left)
 import Control.Monad.Time (MonadTime)
 import Data.Aeson (
@@ -49,7 +50,6 @@ import Web.HttpApiData (
 import Web.Libjwt
 import qualified Web.Libjwt as LJ
 import Web.Model (User (..))
-import Configuration.Dotenv (loadFile, defaultConfig)
 
 -- Type for the private claims of the JWT token
 data Scope = Scope {protectedAccess :: Bool, tokenUserName :: Name}
@@ -197,9 +197,10 @@ decodeAndValidate token = do
   where
     settings = Settings {leeway = 5, appName = Just "someapi"}
 
--- | For docs and tests
--- The following instances and samples have to be in this module, as the Token 
--- type is abstract, so the Token constructor is only accessible in this module
+{- | For docs and tests
+ The following instances and samples have to be in this module, as the Token
+ type is abstract, so the Token constructor is only accessible in this module
+-}
 instance AuthToken IO where
   verifyAuthToken Nothing = throwIO err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
