@@ -13,12 +13,15 @@ RUN apt-get update && \
 
 RUN wget -qO- https://get.haskellstack.org/ | sh
 RUN export PATH=$(stack path --local-bin):$PATH
+RUN --mount=type=cache,target=/root/.local/bin
 
 COPY stack.yaml some-api.cabal ./
+
 RUN stack build --only-dependencies --system-ghc --fast
 
 COPY . .
 RUN stack install
+COPY ./.env /root/.local/bin/
 
 # Run stage
 FROM ubuntu
@@ -33,5 +36,6 @@ RUN apt-get update && \
     ca-certificates
 
 COPY --from=build /root/.local/bin/some-api-exe .
+COPY --from=build /root/.local/bin/.env .
 
 CMD ["/app/some-api-exe", "--local"]

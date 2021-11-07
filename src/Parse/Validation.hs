@@ -28,3 +28,7 @@ class Monad m => Error m where
 
 instance Error App where
   throwError e = liftIO $ throwIO e
+
+-- | For tests
+instance Error IO where
+  throwError = throwIO

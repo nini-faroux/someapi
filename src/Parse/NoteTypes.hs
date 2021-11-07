@@ -93,40 +93,6 @@ makeDateInput = do
   let (year, month, date) = toGregorian $ utctDay time
   return $ DateInput year month date
 
-instance FromJSON NoteTitle
-
-instance ToJSON NoteTitle
-
-instance FromJSON NoteBody
-
-instance ToJSON NoteBody
-
-instance FromJSON Date
-
-instance ToJSON Date
-
-instance FromJSON Year
-
-instance ToJSON Year
-
-instance FromJSON Month
-
-instance ToJSON Month
-
-instance FromJSON DateField
-
-instance ToJSON DateField
-
-instance ToJSON DateInput
-
-instance FromJSON DateInput
-
-PTH.derivePersistField "NoteTitle"
-
-PTH.derivePersistField "NoteBody"
-
-PTH.derivePersistField "Date"
-
 class Monad m => WithDate m where
   makeWithDate :: Either Text DateInput -> m Text
 
@@ -186,6 +152,41 @@ makeDayField :: Int -> Validation [VError] DateField
 makeDayField date
   | date <= 0 || date > 31 = Failure [InvalidDate]
   | otherwise = Success $ DateField date
+
+-- | Instances
+instance FromJSON NoteTitle
+
+instance ToJSON NoteTitle
+
+instance FromJSON NoteBody
+
+instance ToJSON NoteBody
+
+instance FromJSON Date
+
+instance ToJSON Date
+
+instance FromJSON Year
+
+instance ToJSON Year
+
+instance FromJSON Month
+
+instance ToJSON Month
+
+instance FromJSON DateField
+
+instance ToJSON DateField
+
+instance ToJSON DateInput
+
+instance FromJSON DateInput
+
+PTH.derivePersistField "NoteTitle"
+
+PTH.derivePersistField "NoteBody"
+
+PTH.derivePersistField "Date"
 
 -- | Export for the swagger docs and tests
 noteTitleSample :: NoteTitle

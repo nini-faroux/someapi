@@ -49,6 +49,7 @@ import Web.HttpApiData (
 import Web.Libjwt
 import qualified Web.Libjwt as LJ
 import Web.Model (User (..))
+import Configuration.Dotenv (loadFile, defaultConfig)
 
 -- Type for the private claims of the JWT token
 data Scope = Scope {protectedAccess :: Bool, tokenUserName :: Name}
@@ -158,6 +159,7 @@ makeToken privateClaims' seconds currTime = do
 
 hmac512 :: IO (Algorithm Secret)
 hmac512 = do
+  void $ loadFile defaultConfig
   secret <- getEnv "HMAC_SECRET"
   return $ HMAC512 $ MkSecret $ LC.pack secret
 
@@ -195,7 +197,29 @@ decodeAndValidate token = do
   where
     settings = Settings {leeway = 5, appName = Just "someapi"}
 
--- | Export for docs
+-- | For docs and tests
+-- The following instances and samples have to be in this module, as the Token 
+-- type is abstract, so the Token constructor is only accessible in this module
+instance AuthToken IO where
+  verifyAuthToken Nothing = throwIO err400 {errBody = "Token Missing"}
+  verifyAuthToken (Just (Token token)) = do
+    eScope <- decodeToken token
+    case eScope of
+      Left err -> throwIO err400 {errBody = LB.fromString err}
+      Right scope -> return scope
+    where
+      decodeToken token'
+        | hasBearerPrefix token' = decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
+        | otherwise = decodeAndValidateAuth $ encodeUtf8 token'
+      hasBearerPrefix token' = T.take 6 token' == "Bearer"
+
+  makeAuthToken = makeToken'
+    where
+      makeToken' :: Scope -> UTCTime -> IO ByteString
+      makeToken' Scope {..} = makeToken claims 900
+        where
+          claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
+
 tokenSample :: Token
 tokenSample = Token tokenText
 

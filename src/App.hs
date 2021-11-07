@@ -16,6 +16,7 @@ import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPost
 import Network.Wai.Handler.Warp (Port)
 import RIO
 import RIO.Time (UTCTime, getCurrentTime)
+import Configuration.Dotenv (loadFile, defaultConfig)
 import System.Environment (getEnv)
 
 type App = RIO Config
@@ -50,6 +51,7 @@ instance HasLogFunc Config where
 
 makeConfig :: Environment -> IO Config
 makeConfig environment = do
+  void $ loadFile defaultConfig
   postgresPass <- getEnv "POSTGRES_PASSWORD"
   pool' <- makePool postgresPass
   logOptions' <- logOptionsHandle stdout False
@@ -71,11 +73,12 @@ makeConfig environment = do
   where
     hostName'
       | environment == Local = "http://localhost:8080/"
+      | environment == Test = "localhost"
       | otherwise = "https://some-api.fly.dev/"
+    dbHostName' = "postgres-server.internal"
     dbPort' = "5432"
     dbUser' = "postgres"
     dbName' = "someapi"
-    dbHostName' = "postgres-server.internal"
     makePool :: String -> IO ConnectionPool
     makePool pass =
       runStdoutLoggingT $ createPostgresqlPool (connectionString' pass) 2
@@ -97,6 +100,10 @@ class Monad m => WithTime m where
 instance WithTime App where
   getTime = liftIO getCurrentTime
 
+-- | For tests
+instance WithTime IO where
+  getTime = getCurrentTime
+
 class Monad m => GetEnv m where
   getEnv' :: String -> m String
 
@@ -106,6 +113,7 @@ instance GetEnv App where
 data Environment
   = Local
   | FlyProduction
+  | Test
   deriving (Eq, Show)
 
 data CommandOptions = Options
