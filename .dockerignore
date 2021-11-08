@@ -2,4 +2,5 @@
 .git
 .hie
 *.prof
+.env
 *.conf

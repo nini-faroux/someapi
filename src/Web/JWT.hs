@@ -16,7 +16,6 @@ module Web.JWT (
 ) where
 
 import App (App, WithTime (..))
-import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Arrow (left)
 import Control.Monad.Time (MonadTime)
 import Data.Aeson (
@@ -159,7 +158,6 @@ makeToken privateClaims' seconds currTime = do
 
 hmac512 :: IO (Algorithm Secret)
 hmac512 = do
-  void $ loadFile defaultConfig
   secret <- getEnv "HMAC_SECRET"
   return $ HMAC512 $ MkSecret $ LC.pack secret
 

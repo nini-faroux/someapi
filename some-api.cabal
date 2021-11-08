@@ -9,9 +9,9 @@ version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/some-api#readme>
 homepage:       https://github.com/githubuser/some-api#readme
 bug-reports:    https://github.com/githubuser/some-api/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2021 Author name here
+author:         nini faroux
+maintainer:     nini faroux
+copyright:      2021 nini faroux
 license:        BSD3
 build-type:     Simple
 extra-source-files:
@@ -55,7 +55,6 @@ library
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
-    , dotenv
     , either
     , email-validate
     , esqueleto
@@ -113,7 +112,6 @@ executable some-api-exe
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
-    , dotenv
     , either
     , email-validate
     , esqueleto
@@ -169,7 +167,6 @@ test-suite integration-test
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
-    , dotenv
     , either
     , email-validate
     , esqueleto
@@ -225,7 +222,6 @@ test-suite unit-test
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
-    , dotenv
     , either
     , email-validate
     , esqueleto

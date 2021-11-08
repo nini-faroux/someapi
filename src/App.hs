@@ -10,7 +10,6 @@ module App (
   makeConfig,
 ) where
 
-import Configuration.Dotenv (defaultConfig, loadFile)
 import Control.Monad.Logger (runStdoutLoggingT)
 import qualified Data.ByteString.Char8 as LC
 import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPostgresqlPool)
@@ -51,7 +50,6 @@ instance HasLogFunc Config where
 
 makeConfig :: Environment -> IO Config
 makeConfig environment = do
-  void $ loadFile defaultConfig
   postgresPass <- getEnv "POSTGRES_PASSWORD"
   pool' <- makePool postgresPass
   logOptions' <- logOptionsHandle stdout False

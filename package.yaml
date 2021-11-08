@@ -54,7 +54,6 @@ dependencies:
 - hspec-wai-json
 - optparse-applicative
 - resource-pool
-- dotenv
 
 library:
   source-dirs: src
