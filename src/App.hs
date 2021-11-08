@@ -3,7 +3,7 @@ module App (
   CommandOptions (..),
   Config (..),
   Environment (..),
-  GetEnv (..),
+  WithEnv (..),
   WithTime (..),
   HasAppHostName (..),
   HasConnectionPool (..),
@@ -103,10 +103,10 @@ instance WithTime App where
 instance WithTime IO where
   getTime = getCurrentTime
 
-class Monad m => GetEnv m where
+class Monad m => WithEnv m where
   getEnv' :: String -> m String
 
-instance GetEnv App where
+instance WithEnv App where
   getEnv' var = liftIO $ getEnv var
 
 data Environment

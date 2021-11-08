@@ -49,7 +49,7 @@ import Servant.Multipart (
   inputs,
  )
 import Web.Email (
-  Sendmail,
+  WithMail,
   sendActivationLink,
  )
 import Web.JWT (
@@ -129,7 +129,7 @@ createUser ::
   ( Database env m
   , Error m
   , Password m
-  , Sendmail env m
+  , WithMail env m
   ) =>
   UserWithPassword ->
   m Int64

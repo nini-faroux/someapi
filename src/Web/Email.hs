@@ -2,14 +2,14 @@
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
 module Web.Email (
-  Sendmail,
+  WithMail,
   sendActivationLink,
 ) where
 
 import App (
   App,
-  GetEnv (..),
   HasAppHostName (..),
+  WithEnv (..),
   WithTime (..),
  )
 import Network.Mail.Mime (
@@ -50,16 +50,16 @@ class Monad m => SendMail m where
 instance SendMail App where
   sendMail hostName userName pass mail = liftIO $ sendMailWithLoginTLS hostName userName pass mail
 
-type Sendmail env m =
-  ( GetEnv m
-  , HasAppHostName env
+type WithMail env m =
+  ( HasAppHostName env
   , MonadReader env m
   , SendMail m
   , UserToken m
+  , WithEnv m
   , WithTime m
   )
 
-sendActivationLink :: (Sendmail env m) => User -> m ()
+sendActivationLink :: (WithMail env m) => User -> m ()
 sendActivationLink user = do
   config <- ask
   now <- getTime
@@ -80,7 +80,7 @@ sendActivationLink user = do
       case decodeUtf8' token of
         Left _err -> error "Utf8 decoding error"
         Right token' -> renderTokenTemplate tokenTemplate $ context token' appHostName'
-    getEnvVars :: (GetEnv m) => m (UserName, Text, Password)
+    getEnvVars :: (WithEnv m) => m (UserName, Text, Password)
     getEnvVars = do
       gmail <- getEnv' "GOOGLE_MAIL"
       pass <- getEnv' "GOOGLE_PASS"
