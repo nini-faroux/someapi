@@ -2,7 +2,6 @@ module App (
   App,
   CommandOptions (..),
   Config (..),
-  Environment (..),
   WithEnv (..),
   WithTime (..),
   HasAppHostName (..),
@@ -12,6 +11,7 @@ module App (
 
 import Control.Monad.Logger (runStdoutLoggingT)
 import qualified Data.ByteString.Char8 as LC
+import qualified Data.Text as T
 import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPostgresqlPool)
 import Network.Wai.Handler.Warp (Port)
 import RIO
@@ -48,9 +48,10 @@ instance HasAppHostName Config where
 instance HasLogFunc Config where
   logFuncL = lens logFunc (\c f -> c {logFunc = f})
 
-makeConfig :: Environment -> IO Config
-makeConfig environment = do
+makeConfig :: IO Config
+makeConfig = do
   postgresPass <- getEnv "POSTGRES_PASSWORD"
+  hostName' <- getEnv "HOST_NAME"
   pool' <- makePool postgresPass
   logOptions' <- logOptionsHandle stdout False
   let logOptions = setLogUseTime True logOptions'
@@ -60,18 +61,15 @@ makeConfig environment = do
         { connectionPool = pool'
         , connectionString = connectionString' postgresPass
         , appPort = 8080
-        , appHostName = hostName'
+        , appHostName = T.pack hostName'
         , dbPort = dbPort'
         , dbUser = dbUser'
         , dbName = dbName'
         , dbHostName = dbHostName'
-        , deployHostName = hostName'
+        , deployHostName = T.pack hostName'
         , logFunc = logFunc'
         }
   where
-    hostName'
-      | environment == Local = "http://localhost:8080/"
-      | otherwise = "https://some-api.fly.dev/"
     dbHostName' = "postgres-server.internal"
     dbPort' = "5432"
     dbUser' = "postgres"
@@ -107,12 +105,6 @@ class Monad m => WithEnv m where
 instance WithEnv App where
   getEnv' var = liftIO $ getEnv var
 
-data Environment
-  = Local
-  | FlyProduction
-  deriving (Eq, Show)
-
-data CommandOptions = Options
-  { localRun :: Bool
-  , writeDocs :: Bool
+newtype CommandOptions = Options
+  { writeDocs :: Bool
   }

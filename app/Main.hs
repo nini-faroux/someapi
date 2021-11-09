@@ -4,7 +4,6 @@ import Api (noteApi)
 import App (
   CommandOptions (..),
   Config (..),
-  Environment (..),
   makeConfig,
  )
 import Docs.Docs (writeSwaggerJSON)
@@ -31,8 +30,7 @@ main = execParser options >>= runApp
   where
     parser =
       Options
-        <$> switch (short 'l' <> long "local" <> help "Run local docker setup instead of production setup")
-        <*> switch (short 'd' <> long "docs" <> help "Write the swagger docs for current API")
+        <$> switch (short 'd' <> long "docs" <> help "Write the swagger docs for current API")
     options =
       info
         (helper <*> parser)
@@ -44,13 +42,11 @@ main = execParser options >>= runApp
 runApp :: CommandOptions -> IO ()
 runApp options
   | writeDocs' = writeSwaggerJSON
-  | localRun' = run' Local
-  | otherwise = run' FlyProduction
+  | otherwise = run'
   where
     writeDocs' = writeDocs options
-    localRun' = localRun options
-    run' :: Environment -> IO ()
-    run' environment = do
-      cfg@Config {..} <- makeConfig environment
+    run' :: IO ()
+    run' = do
+      cfg@Config {..} <- makeConfig
       _ <- runMigrations connectionString
       run appPort $ serve noteApi $ hoistAppServer cfg

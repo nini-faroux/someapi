@@ -21,7 +21,6 @@ RUN stack build --only-dependencies --system-ghc --fast
 
 COPY . .
 RUN stack install
-COPY ./.env /root/.local/bin/
 
 # Run stage
 FROM ubuntu
@@ -36,6 +35,5 @@ RUN apt-get update && \
     ca-certificates
 
 COPY --from=build /root/.local/bin/some-api-exe .
-COPY --from=build /root/.local/bin/.env .
 
-CMD ["/app/some-api-exe", "--local"]
+CMD ["/app/some-api-exe"]
