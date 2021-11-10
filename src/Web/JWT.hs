@@ -11,7 +11,6 @@ module Web.JWT (
   Scope (..),
   Token,
   UserToken (..),
-  makeAuthToken',
   tokenSample,
 ) where
 
@@ -98,7 +97,7 @@ instance UserToken App where
 
 class Monad m => AuthToken m where
   verifyAuthToken :: Maybe Token -> m Scope
-  makeAuthToken :: Scope -> UTCTime -> m ByteString
+  makeAuthToken :: Name -> m Token
 
 instance AuthToken App where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
@@ -115,26 +114,18 @@ instance AuthToken App where
         | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
-  makeAuthToken scope time = liftIO $ makeToken' scope time
-    where
-      makeToken' :: Scope -> UTCTime -> IO ByteString
-      makeToken' Scope {..} = makeToken claims 900
-        where
-          claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
+  makeAuthToken existingName = do
+    now <- getTime
+    token <- liftIO $ makeToken' scope now
+    case decodeUtf8' token of
+      Left err -> throwError err400 {errBody = LB.fromString $ show err}
+      Right token' -> return $ Token token'
+    where scope = Scope {protectedAccess = True, tokenUserName = existingName}
 
-makeAuthToken' ::
-  ( AuthToken m
-  , Error m
-  , WithTime m
-  ) =>
-  Name ->
-  m Token
-makeAuthToken' existingName = do
-  now <- getTime
-  token <- makeAuthToken (Scope {protectedAccess = True, tokenUserName = existingName}) now
-  case decodeUtf8' token of
-    Left err -> throwError err400 {errBody = LB.fromString $ show err}
-    Right token' -> return $ Token token'
+makeToken' :: Scope -> UTCTime -> IO ByteString
+makeToken' Scope {..} = makeToken claims 900
+  where
+    claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
 
 makeToken ::
   (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>
@@ -196,29 +187,33 @@ decodeAndValidate token = do
     settings = Settings {leeway = 5, appName = Just "someapi"}
 
 {- | For docs and tests
- The following instances and samples have to be in this module, as the Token
- type is abstract, so the Token constructor is only accessible in this module
 -}
 instance AuthToken IO where
-  verifyAuthToken Nothing = throwIO err400 {errBody = "Token Missing"}
+  verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
     eScope <- decodeToken token
     case eScope of
-      Left err -> throwIO err400 {errBody = LB.fromString err}
+      Left err -> throwError err400 {errBody = LB.fromString err}
       Right scope -> return scope
     where
+      -- Need to trim the token to account for the 'Bearer' prefix
+      -- otherwise in that case it will raise a decoding error
       decodeToken token'
         | hasBearerPrefix token' = decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
         | otherwise = decodeAndValidateAuth $ encodeUtf8 token'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
-  makeAuthToken = makeToken'
-    where
-      makeToken' :: Scope -> UTCTime -> IO ByteString
-      makeToken' Scope {..} = makeToken claims 900
-        where
-          claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
+  makeAuthToken existingName = do
+    now <- getTime
+    token <- makeToken' scope now
+    case decodeUtf8' token of
+      Left err -> throwError err400 {errBody = LB.fromString $ show err}
+      Right token' -> return $ Token token'
+    where scope = Scope {protectedAccess = True, tokenUserName = existingName}
 
+{- | The following sample has to be in this module, as the Token
+type is abstract, so the Token constructor is only accessible in this module
+-}
 tokenSample :: Token
 tokenSample = Token tokenText
 

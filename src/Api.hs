@@ -57,7 +57,6 @@ import Web.JWT (
   Scope (..),
   Token,
   UserToken (..),
-  makeAuthToken',
  )
 import Web.Model (
   Database,
@@ -156,7 +155,6 @@ loginUser ::
   , Database env m
   , Error m
   , WithName m
-  , WithTime m
   ) =>
   UserLogin ->
   m Token
@@ -165,7 +163,7 @@ loginUser UserLogin {..} = do
   existingName <- checkNameExists name
   hashPass <- getAuth existingName
   _passCheck <- checkPassword' loginPassword hashPass
-  makeAuthToken' existingName
+  makeAuthToken existingName
 
 {- | Endpoint handler for creating new notes, requires an active auth token
  The 'noteAuthor' field in the request's body must be the same as your own user name (the one you are logged in with)
