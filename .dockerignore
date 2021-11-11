@@ -4,3 +4,4 @@
 *.prof
 .env
 *.conf
+pgdata

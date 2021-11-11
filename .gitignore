@@ -5,3 +5,4 @@ Config.hs
 dist-newstyle
 .env
 *.conf
+pgdata
