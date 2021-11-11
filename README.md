@@ -25,7 +25,7 @@ To build and run locally with Docker, run the following:
 docker-compose -f docker-compose-local.yml up --build
 ```
 
-You can then access the API at:
+You can then interact with the API at:
   * localhost:8080
 
 For docker-compose to work locally you will need to:
@@ -34,6 +34,25 @@ For docker-compose to work locally you will need to:
   * create a '.env' file, setting the environment variables specified in the '.env.example' file.
   
 These environment variables include the HMAC secret needed for the JWT tokens.
+
+***
+
+To run the integrations tests, run the following:
+
+```bash
+./setup-integration-test.sh
+```
+
+This will remove any associated local volume before running the docker compose local setup.
+
+Wait until it is ready to receive requests, then run the following:
+
+```bash
+stack test :integration-test
+```
+
+This will first create the required environment variables locally,
+then run the tests, and then unset the environment variables before finishing.
 
 ***
 
