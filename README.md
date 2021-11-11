@@ -43,7 +43,7 @@ To run the integrations tests, run the following:
 ./setup-integration-test.sh
 ```
 
-This will remove any associated local volume before running the docker compose local setup.
+This will remove the associated (pgdata) volume before running the docker compose local setup.
 
 Wait until it is ready to receive requests, then run the following:
 
@@ -59,7 +59,5 @@ then run the tests, and then unset the environment variables before finishing.
 To update the swagger documentation, run the following:
 
 ```bash
-stack build
-stack exec -- some-api-exe -d
-redoc-cli bundle -o static/index.html swagger-docs/api.json
+./update-docs.sh
 ```
