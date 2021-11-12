@@ -14,7 +14,7 @@ module Web.JWT (
   tokenSample,
 ) where
 
-import App (App, WithTime (..))
+import App (App, Config(..), EmailConfig(..), WithTime (..))
 import Control.Arrow (left)
 import Control.Monad.Time (MonadTime)
 import Data.Aeson (
@@ -78,9 +78,11 @@ class Monad m => UserToken m where
   verifyUserToken :: Text -> m User
 
 instance UserToken App where
-  makeUserToken user time = liftIO $ makeUserToken' user time
+  makeUserToken user time = do
+    config <- ask
+    liftIO $ makeUserToken' user time (hmacSecret $ emailConfig config)
     where
-      makeUserToken' :: User -> UTCTime -> IO ByteString
+      makeUserToken' :: User -> UTCTime -> String -> IO ByteString
       makeUserToken' User {..} = makeToken claims 7200
         where
           claims =
@@ -90,7 +92,8 @@ instance UserToken App where
             )
 
   verifyUserToken token = do
-    eUser <- liftIO . decodeAndValidateUser $ encodeUtf8 token
+    config <- ask
+    eUser <- liftIO $ decodeAndValidateUser (encodeUtf8 token) (hmacSecret $ emailConfig config)
     case eUser of
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right user -> return user
@@ -102,27 +105,29 @@ class Monad m => AuthToken m where
 instance AuthToken App where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
-    eScope <- decodeToken token
+    config <- ask
+    eScope <- decodeToken token (hmacSecret $ emailConfig config)
     case eScope of
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right scope -> return scope
     where
       -- Need to trim the token to account for the 'Bearer' prefix
       -- otherwise in that case it will raise a decoding error
-      decodeToken token'
-        | hasBearerPrefix token' = liftIO . decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
-        | otherwise = liftIO . decodeAndValidateAuth $ encodeUtf8 token'
+      decodeToken token' secret'
+        | hasBearerPrefix token' = liftIO $ decodeAndValidateAuth (encodeUtf8 $ T.init $ T.drop 8 token') secret'
+        | otherwise = liftIO $ decodeAndValidateAuth (encodeUtf8 token') secret'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
   makeAuthToken existingName = do
+    config <- ask
     now <- getTime
-    token <- liftIO $ makeToken' scope now
+    token <- liftIO $ makeToken' scope now (hmacSecret $ emailConfig config)
     case decodeUtf8' token of
       Left err -> throwError err400 {errBody = LB.fromString $ show err}
       Right token' -> return $ Token token'
     where scope = Scope {protectedAccess = True, tokenUserName = existingName}
 
-makeToken' :: Scope -> UTCTime -> IO ByteString
+makeToken' :: Scope -> UTCTime -> String -> IO ByteString
 makeToken' Scope {..} = makeToken claims 900
   where
     claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
@@ -132,10 +137,11 @@ makeToken ::
   a ->
   NominalDiffTime ->
   UTCTime ->
+  String ->
   IO ByteString
-makeToken privateClaims' seconds currTime = do
-  hmac512' <- hmac512
-  return . getToken $ sign hmac512' $ makePayload currTime
+makeToken privateClaims' seconds currTime hmacSecret = do
+  let hmacSecret' = hmac512 hmacSecret
+  return . getToken $ sign hmacSecret' $ makePayload currTime
   where
     makePayload currTime' =
       let now = fromUTC currTime'
@@ -147,41 +153,41 @@ makeToken privateClaims' seconds currTime = do
             , privateClaims = toPrivateClaims privateClaims'
             }
 
-hmac512 :: IO (Algorithm Secret)
-hmac512 = do
-  secret <- getEnv "HMAC_SECRET"
-  return $ HMAC512 $ MkSecret $ LC.pack secret
+hmac512 :: String -> Algorithm Secret
+hmac512 secret = HMAC512 $ MkSecret $ LC.pack secret
 
-decodeAndValidateUser :: ByteString -> IO (Either String User)
+decodeAndValidateUser :: ByteString -> String -> IO (Either String User)
 decodeAndValidateUser = decodeAndValidateFull decodeAndValidateUser'
 
-decodeAndValidateAuth :: ByteString -> IO (Either String Scope)
+decodeAndValidateAuth :: ByteString -> String -> IO (Either String Scope)
 decodeAndValidateAuth = decodeAndValidateFull decodeAndValidateAuth'
 
-decodeAndValidateUser' :: ByteString -> IO (ValidationNEL ValidationFailure (Validated UserJwt))
+decodeAndValidateUser' :: ByteString -> String -> IO (ValidationNEL ValidationFailure (Validated UserJwt))
 decodeAndValidateUser' = decodeAndValidate
 
-decodeAndValidateAuth' :: ByteString -> IO (ValidationNEL ValidationFailure (Validated AuthJwt))
+decodeAndValidateAuth' :: ByteString -> String -> IO (ValidationNEL ValidationFailure (Validated AuthJwt))
 decodeAndValidateAuth' = decodeAndValidate
 
 decodeAndValidateFull ::
   (Show e, FromPrivateClaims b) =>
-  (ByteString -> IO (ValidationNEL e (Validated (Jwt (Claims b) namespace)))) ->
+  (ByteString -> String -> IO (ValidationNEL e (Validated (Jwt (Claims b) namespace)))) ->
   ByteString ->
+  String ->
   IO (Either String b)
-decodeAndValidateFull decode token =
-  (left (("Token not valid: " ++) . show) . fmap toInnerType . validationToEither <$> decode token) `catch` onError
+decodeAndValidateFull decode token secret =
+  (left (("Token not valid: " ++) . show) . fmap toInnerType . validationToEither <$> decode token secret) `catch` onError
   where
     toInnerType = fromPrivateClaims . privateClaims . payload . getValid
     onError (e :: SomeDecodeException) =
       return $ Left $ "Cannot decode token " ++ displayException e
 
 decodeAndValidate ::
-  (Decode (PrivateClaims a b), MonadTime m, MonadThrow m, MonadIO m) =>
+  (Decode (PrivateClaims a b), MonadTime m, MonadThrow m) =>
   ByteString ->
+  String ->
   m (ValidationNEL ValidationFailure (Validated (Jwt a b)))
-decodeAndValidate token = do
-  hmac512' <- liftIO hmac512
+decodeAndValidate token secret = do
+  let hmac512' = hmac512 secret
   jwtFromByteString settings mempty hmac512' token
   where
     settings = Settings {leeway = 5, appName = Just "someapi"}
@@ -191,7 +197,8 @@ decodeAndValidate token = do
 instance AuthToken IO where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
-    eScope <- decodeToken token
+    secret <- getEnv "HMAC_SECRET"
+    eScope <- decodeToken token secret
     case eScope of
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right scope -> return scope
@@ -205,7 +212,8 @@ instance AuthToken IO where
 
   makeAuthToken existingName = do
     now <- getTime
-    token <- makeToken' scope now
+    secret <- getEnv "HMAC_SECRET"
+    token <- makeToken' scope now secret
     case decodeUtf8' token of
       Left err -> throwError err400 {errBody = LB.fromString $ show err}
       Right token' -> return $ Token token'
