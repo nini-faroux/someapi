@@ -8,8 +8,8 @@ module Web.Email (
 
 import App (
   App,
-  HasGoogleMail (..),
   HasAppHostName (..),
+  HasGoogleMail (..),
   WithTime (..),
  )
 import Network.Mail.Mime (
@@ -48,7 +48,8 @@ class Monad m => SendMail m where
   sendMail :: String -> UserName -> Password -> Mail -> m ()
 
 instance SendMail App where
-  sendMail hostName userName pass mail = liftIO $ sendMailWithLoginTLS hostName userName pass mail
+  sendMail hostName userName pass mail =
+    liftIO $ sendMailWithLoginTLS hostName userName pass mail
 
 type WithMail env m =
   ( HasAppHostName env

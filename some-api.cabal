@@ -26,6 +26,7 @@ library
       Api
       App
       Docs.Docs
+      Environment
       Parse.Authenticate
       Parse.NoteTypes
       Parse.NoteValidation

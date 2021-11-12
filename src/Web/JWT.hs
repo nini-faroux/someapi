@@ -14,7 +14,7 @@ module Web.JWT (
   tokenSample,
 ) where
 
-import App (App, HasSecret(..), WithTime (..))
+import App (App, HasSecret (..), WithTime (..))
 import Control.Arrow (left)
 import Control.Monad.Time (MonadTime)
 import Data.Aeson (
@@ -114,7 +114,8 @@ instance AuthToken App where
       -- Need to trim the token to account for the 'Bearer' prefix
       -- otherwise in that case it will raise a decoding error
       decodeToken token' secret'
-        | hasBearerPrefix token' = liftIO $ decodeAndValidateAuth (encodeUtf8 $ T.init $ T.drop 8 token') secret'
+        | hasBearerPrefix token' =
+          liftIO $ decodeAndValidateAuth (encodeUtf8 $ T.init $ T.drop 8 token') secret'
         | otherwise = liftIO $ decodeAndValidateAuth (encodeUtf8 token') secret'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
@@ -125,7 +126,8 @@ instance AuthToken App where
     case decodeUtf8' token of
       Left err -> throwError err400 {errBody = LB.fromString $ show err}
       Right token' -> return $ Token token'
-    where scope = Scope {protectedAccess = True, tokenUserName = existingName}
+    where
+      scope = Scope {protectedAccess = True, tokenUserName = existingName}
 
 makeToken' :: Scope -> UTCTime -> String -> IO ByteString
 makeToken' Scope {..} = makeToken claims 900
@@ -162,10 +164,16 @@ decodeAndValidateUser = decodeAndValidateFull decodeAndValidateUser'
 decodeAndValidateAuth :: ByteString -> String -> IO (Either String Scope)
 decodeAndValidateAuth = decodeAndValidateFull decodeAndValidateAuth'
 
-decodeAndValidateUser' :: ByteString -> String -> IO (ValidationNEL ValidationFailure (Validated UserJwt))
+decodeAndValidateUser' ::
+  ByteString ->
+  String ->
+  IO (ValidationNEL ValidationFailure (Validated UserJwt))
 decodeAndValidateUser' = decodeAndValidate
 
-decodeAndValidateAuth' :: ByteString -> String -> IO (ValidationNEL ValidationFailure (Validated AuthJwt))
+decodeAndValidateAuth' ::
+  ByteString ->
+  String ->
+  IO (ValidationNEL ValidationFailure (Validated AuthJwt))
 decodeAndValidateAuth' = decodeAndValidate
 
 decodeAndValidateFull ::
@@ -175,7 +183,12 @@ decodeAndValidateFull ::
   String ->
   IO (Either String b)
 decodeAndValidateFull decode token secret =
-  (left (("Token not valid: " ++) . show) . fmap toInnerType . validationToEither <$> decode token secret) `catch` onError
+  ( left (("Token not valid: " ++) . show)
+      . fmap toInnerType
+      . validationToEither
+      <$> decode token secret
+  )
+    `catch` onError
   where
     toInnerType = fromPrivateClaims . privateClaims . payload . getValid
     onError (e :: SomeDecodeException) =
@@ -192,7 +205,8 @@ decodeAndValidate token secret = do
   where
     settings = Settings {leeway = 5, appName = Just "someapi"}
 
-{- | For docs and tests -}
+-- | For docs and tests
+
 -- | Need an IO instance for testing to simulate when a user has authenticated
 instance AuthToken IO where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
@@ -204,7 +218,8 @@ instance AuthToken IO where
       Right scope -> return scope
     where
       decodeToken token'
-        | hasBearerPrefix token' = decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
+        | hasBearerPrefix token' =
+          decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
         | otherwise = decodeAndValidateAuth $ encodeUtf8 token'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
@@ -215,7 +230,8 @@ instance AuthToken IO where
     case decodeUtf8' token of
       Left err -> throwError err400 {errBody = LB.fromString $ show err}
       Right token' -> return $ Token token'
-    where scope = Scope {protectedAccess = True, tokenUserName = existingName}
+    where
+      scope = Scope {protectedAccess = True, tokenUserName = existingName}
 
 {- | The following sample has to be in this module, as the Token
 type is abstract, so the Token constructor is only accessible in this module

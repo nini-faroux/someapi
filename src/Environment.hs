@@ -1,17 +1,14 @@
-module Environment
-  ( EnvVars(..)
-  , getEnvVars
-  )
-  where
+module Environment (
+  EnvVars (..),
+  getEnvVars,
+) where
 
-import RIO
 import qualified Data.Text as T
+import RIO
 import System.Environment (getEnv)
-import GHC.Generics ()
 
-data EnvVars =
-  EnvVars {
-    postgresUser :: !String
+data EnvVars = EnvVars
+  { postgresUser :: !String
   , postgresPass :: !String
   , postgresDb :: !String
   , appHostName :: !Text
