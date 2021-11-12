@@ -3,8 +3,10 @@ module Main (main) where
 import Api (noteApi)
 import App (
   CommandOptions (..),
-  Config (..),
+  Config (Config, appConfig, dbConfig),
   makeConfig,
+  appPort,
+  connectionString
  )
 import Docs.Docs (writeSwaggerJSON)
 import Network.Wai.Handler.Warp (run)
@@ -48,5 +50,5 @@ runApp options
     run' :: IO ()
     run' = do
       cfg@Config {..} <- makeConfig
-      _ <- runMigrations connectionString
-      run appPort $ serve noteApi $ hoistAppServer cfg
+      _ <- runMigrations $ connectionString dbConfig
+      run (appPort appConfig) $ serve noteApi $ hoistAppServer cfg

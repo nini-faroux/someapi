@@ -2,6 +2,9 @@ module App (
   App,
   CommandOptions (..),
   Config (..),
+  AppConfig (..),
+  DBConfig (..),
+  EmailConfig (..),
   WithEnv (..),
   WithTime (..),
   HasAppHostName (..),
@@ -11,83 +14,103 @@ module App (
 
 import Control.Monad.Logger (runStdoutLoggingT)
 import qualified Data.ByteString.Char8 as LC
-import qualified Data.Text as T
 import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPostgresqlPool)
 import Network.Wai.Handler.Warp (Port)
 import RIO
 import RIO.Time (UTCTime, getCurrentTime)
 import System.Environment (getEnv)
+import Environment (EnvVars, getEnvVars)
+import qualified Environment as E
 
 type App = RIO Config
 
-data Config = Config
-  { connectionPool :: !ConnectionPool
-  , connectionString :: !ConnectionString
-  , appPort :: !Port
-  , appHostName :: !Text
-  , dbPort :: !String
-  , dbUser :: !String
-  , dbName :: !String
-  , dbHostName :: !String
-  , deployHostName :: !Text
-  , logFunc :: !LogFunc
+data Config =
+  Config {
+    appConfig :: !AppConfig
+  , dbConfig :: !DBConfig
+  , emailConfig :: !EmailConfig
   }
+
+data AppConfig =
+  AppConfig {
+    appPort :: !Port
+  , appHostName :: !Text
+  }
+
+data DBConfig =
+  DBConfig {
+    connectionPool :: !ConnectionPool
+  , connectionString :: !ConnectionString
+  , postgresDb :: !String
+  , dbPort :: !String
+  , postgresPass :: !String
+  , postgresUser :: !String
+  }
+
+data EmailConfig =
+  EmailConfig {
+    googleMail :: !String
+  , googlePass :: !String
+  , hmacSecret :: !String
+  }
+
+makeConfig :: IO Config
+makeConfig = do
+  envVars <- getEnvVars
+  pool' <- makePool envVars
+  return Config {
+     appConfig = 
+       AppConfig {
+         appPort = 8080
+       , appHostName = E.appHostName envVars
+       }, 
+     dbConfig = 
+       DBConfig {
+           connectionPool = pool'
+         , connectionString = connectionString' envVars
+         , postgresDb = postgresDb' envVars
+         , dbPort = dbPort'
+         , postgresUser = postgresUser' envVars
+         , postgresPass = postgresPass' envVars
+       },
+     emailConfig =
+       EmailConfig {
+         googleMail = E.googleMail envVars
+       , googlePass = E.googlePass envVars
+       , hmacSecret = E.hmacSecret envVars
+       }
+  }
+  where
+    makePool :: EnvVars -> IO ConnectionPool
+    makePool evs = 
+      runStdoutLoggingT $ createPostgresqlPool (connectionString' evs) 2
+    connectionString' :: EnvVars -> ConnectionString
+    connectionString' evs =
+      "host=" <> LC.pack "postgres-server.internal"
+        <> " port="
+        <> LC.pack dbPort'
+        <> " user="
+        <> LC.pack (postgresUser' evs)
+        <> " dbname="
+        <> LC.pack (postgresDb' evs)
+        <> " password="
+        <> LC.pack (postgresPass' evs)
+    dbPort' = "5432"
+    postgresUser' = E.postgresUser
+    postgresDb' = E.postgresDb
+    postgresPass' = E.postgresPass
 
 class HasConnectionPool env where
   getConnectionPool :: env -> ConnectionPool
 
 instance HasConnectionPool Config where
-  getConnectionPool = connectionPool
+  getConnectionPool = connectionPool . dbConfig
 
 class HasAppHostName env where
   getAppHostName :: env -> Text
 
 instance HasAppHostName Config where
-  getAppHostName = appHostName
-
-instance HasLogFunc Config where
-  logFuncL = lens logFunc (\c f -> c {logFunc = f})
-
-makeConfig :: IO Config
-makeConfig = do
-  postgresPass <- getEnv "POSTGRES_PASSWORD"
-  hostName' <- getEnv "HOST_NAME"
-  pool' <- makePool postgresPass
-  logOptions' <- logOptionsHandle stdout False
-  let logOptions = setLogUseTime True logOptions'
-  withLogFunc logOptions $ \logFunc' ->
-    return
-      Config
-        { connectionPool = pool'
-        , connectionString = connectionString' postgresPass
-        , appPort = 8080
-        , appHostName = T.pack hostName'
-        , dbPort = dbPort'
-        , dbUser = dbUser'
-        , dbName = dbName'
-        , dbHostName = dbHostName'
-        , deployHostName = T.pack hostName'
-        , logFunc = logFunc'
-        }
-  where
-    dbHostName' = "postgres-server.internal"
-    dbPort' = "5432"
-    dbUser' = "postgres"
-    dbName' = "someapi"
-    makePool :: String -> IO ConnectionPool
-    makePool pass =
-      runStdoutLoggingT $ createPostgresqlPool (connectionString' pass) 2
-    connectionString' :: String -> ConnectionString
-    connectionString' pass =
-      "host=" <> LC.pack dbHostName'
-        <> " port="
-        <> LC.pack dbPort'
-        <> " user="
-        <> LC.pack dbUser'
-        <> " dbname="
-        <> LC.pack dbName'
-        <> " password="
-        <> LC.pack pass
+  getAppHostName = appHostName . appConfig
 
 class Monad m => WithTime m where
   getTime :: m UTCTime
