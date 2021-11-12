@@ -8,6 +8,7 @@ module Web.Email (
 
 import App (
   App,
+  HasGoogleMail (..),
   HasAppHostName (..),
   WithEnv (..),
   WithTime (..),
@@ -52,6 +53,7 @@ instance SendMail App where
 
 type WithMail env m =
   ( HasAppHostName env
+  , HasGoogleMail env
   , MonadReader env m
   , SendMail m
   , UserToken m
@@ -64,7 +66,7 @@ sendActivationLink user = do
   config <- ask
   now <- getTime
   token <- makeUserToken user now
-  (googleMail, googleMail', googlePass) <- getEnvVars
+  (googleMail, googleMail', googlePass) <- getEmailDetails config
   let urlHtml = htmlPart $ TL.fromStrict $ urlText token $ getAppHostName config
       mail = simpleMail (from googleMail') to cc bcc subject [body, urlHtml]
   sendMail host googleMail googlePass mail
@@ -80,10 +82,10 @@ sendActivationLink user = do
       case decodeUtf8' token of
         Left _err -> error "Utf8 decoding error"
         Right token' -> renderTokenTemplate tokenTemplate $ context token' appHostName'
-    getEnvVars :: (WithEnv m) => m (UserName, Text, Password)
-    getEnvVars = do
-      gmail <- getEnv' "GOOGLE_MAIL"
-      pass <- getEnv' "GOOGLE_PASS"
+    getEmailDetails :: (WithMail env m) => env -> m (UserName, Text, Password)
+    getEmailDetails config = do
+      let gmail = getGoogleMail config
+          pass = getGooglePass config
       return (gmail, pack gmail, pass)
 
 renderTokenTemplate :: Template SourcePos -> HashMap Text Text -> Text

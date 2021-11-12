@@ -5,6 +5,7 @@ module App (
   AppConfig (..),
   DBConfig (..),
   EmailConfig (..),
+  HasGoogleMail (..),
   WithEnv (..),
   WithTime (..),
   HasAppHostName (..),
@@ -111,6 +112,14 @@ class HasAppHostName env where
 
 instance HasAppHostName Config where
   getAppHostName = appHostName . appConfig
+
+class HasGoogleMail env where
+  getGoogleMail :: env -> String
+  getGooglePass :: env -> String
+
+instance HasGoogleMail Config where
+  getGoogleMail = googleMail . emailConfig
+  getGooglePass = googlePass . emailConfig
 
 class Monad m => WithTime m where
   getTime :: m UTCTime
