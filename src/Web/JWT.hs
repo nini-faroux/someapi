@@ -14,7 +14,7 @@ module Web.JWT (
   tokenSample,
 ) where
 
-import App (App, Config(..), EmailConfig(..), WithTime (..))
+import App (App, HasSecret(..), WithTime (..))
 import Control.Arrow (left)
 import Control.Monad.Time (MonadTime)
 import Data.Aeson (
@@ -80,7 +80,7 @@ class Monad m => UserToken m where
 instance UserToken App where
   makeUserToken user time = do
     config <- ask
-    liftIO $ makeUserToken' user time (hmacSecret $ emailConfig config)
+    liftIO $ makeUserToken' user time $ getHmacSecret config
     where
       makeUserToken' :: User -> UTCTime -> String -> IO ByteString
       makeUserToken' User {..} = makeToken claims 7200
@@ -93,7 +93,7 @@ instance UserToken App where
 
   verifyUserToken token = do
     config <- ask
-    eUser <- liftIO $ decodeAndValidateUser (encodeUtf8 token) (hmacSecret $ emailConfig config)
+    eUser <- liftIO $ decodeAndValidateUser (encodeUtf8 token) (getHmacSecret config)
     case eUser of
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right user -> return user
@@ -106,7 +106,7 @@ instance AuthToken App where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
     config <- ask
-    eScope <- decodeToken token (hmacSecret $ emailConfig config)
+    eScope <- decodeToken token $ getHmacSecret config
     case eScope of
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right scope -> return scope
@@ -121,7 +121,7 @@ instance AuthToken App where
   makeAuthToken existingName = do
     config <- ask
     now <- getTime
-    token <- liftIO $ makeToken' scope now (hmacSecret $ emailConfig config)
+    token <- liftIO $ makeToken' scope now $ getHmacSecret config
     case decodeUtf8' token of
       Left err -> throwError err400 {errBody = LB.fromString $ show err}
       Right token' -> return $ Token token'
@@ -192,8 +192,8 @@ decodeAndValidate token secret = do
   where
     settings = Settings {leeway = 5, appName = Just "someapi"}
 
-{- | For docs and tests
--}
+{- | For docs and tests -}
+-- | Need an IO instance for testing to simulate when a user has authenticated
 instance AuthToken IO where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
@@ -203,8 +203,6 @@ instance AuthToken IO where
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right scope -> return scope
     where
-      -- Need to trim the token to account for the 'Bearer' prefix
-      -- otherwise in that case it will raise a decoding error
       decodeToken token'
         | hasBearerPrefix token' = decodeAndValidateAuth $ encodeUtf8 $ T.init $ T.drop 8 token'
         | otherwise = decodeAndValidateAuth $ encodeUtf8 token'
