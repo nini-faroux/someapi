@@ -10,7 +10,6 @@ import App (
   App,
   HasGoogleMail (..),
   HasAppHostName (..),
-  WithEnv (..),
   WithTime (..),
  )
 import Network.Mail.Mime (
@@ -57,7 +56,6 @@ type WithMail env m =
   , MonadReader env m
   , SendMail m
   , UserToken m
-  , WithEnv m
   , WithTime m
   )
 

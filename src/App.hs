@@ -7,7 +7,6 @@ module App (
   EmailConfig (..),
   HasGoogleMail (..),
   HasSecret (..),
-  WithEnv (..),
   WithTime (..),
   HasAppHostName (..),
   HasConnectionPool (..),
@@ -20,7 +19,6 @@ import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPost
 import Network.Wai.Handler.Warp (Port)
 import RIO
 import RIO.Time (UTCTime, getCurrentTime)
-import System.Environment (getEnv)
 import Environment (EnvVars, getEnvVars)
 import qualified Environment as E
 
@@ -137,12 +135,6 @@ instance WithTime App where
 -- | For tests
 instance WithTime IO where
   getTime = getCurrentTime
-
-class Monad m => WithEnv m where
-  getEnv' :: String -> m String
-
-instance WithEnv App where
-  getEnv' var = liftIO $ getEnv var
 
 newtype CommandOptions = Options
   { writeDocs :: Bool
