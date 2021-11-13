@@ -13,8 +13,8 @@ import Parse.UserTypes (
   validPassword,
  )
 import Parse.Validation (
-  Error (..),
   VError (..),
+  WithError (..),
  )
 import RIO
 import Servant (
@@ -24,13 +24,13 @@ import Servant (
 import Web.Model (
   User (..),
   UserWithPassword (..),
+  WithDatabase,
  )
-import Web.Query (Database)
 import qualified Web.Query as Query
 
 parseUser ::
-  ( Database env m
-  , Error m
+  ( WithDatabase env m
+  , WithError m
   ) =>
   UserWithPassword ->
   m User
@@ -48,7 +48,7 @@ parseUser uwp@UserWithPassword {..} = do
     Failure userErrors -> throwError err400 {errBody = errorsToBS [userErrors, emailExistsError, nameExistsError, passwordError]}
   where
     existsError ::
-      (Database env m) =>
+      (WithDatabase env m) =>
       Text ->
       (Text -> Validation [VError] a) ->
       VError ->

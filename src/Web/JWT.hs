@@ -7,10 +7,10 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Web.JWT (
-  AuthToken (..),
+  WithAuthToken (..),
   Scope (..),
   Token,
-  UserToken (..),
+  WithUserToken (..),
   tokenSample,
 ) where
 
@@ -29,7 +29,7 @@ import Parse.UserTypes (
   Email,
   Name,
  )
-import Parse.Validation (Error (..))
+import Parse.Validation (WithError (..))
 import RIO
 import RIO.Time (
   NominalDiffTime,
@@ -73,11 +73,11 @@ instance FromJSON Token
 
 instance ToJSON Token
 
-class Monad m => UserToken m where
+class Monad m => WithUserToken m where
   makeUserToken :: User -> UTCTime -> m ByteString
   verifyUserToken :: Text -> m User
 
-instance UserToken App where
+instance WithUserToken App where
   makeUserToken user time = do
     config <- ask
     liftIO $ makeUserToken' user time $ getHmacSecret config
@@ -98,11 +98,11 @@ instance UserToken App where
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right user -> return user
 
-class Monad m => AuthToken m where
+class Monad m => WithAuthToken m where
   verifyAuthToken :: Maybe Token -> m Scope
   makeAuthToken :: Name -> m Token
 
-instance AuthToken App where
+instance WithAuthToken App where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
     config <- ask
@@ -208,7 +208,7 @@ decodeAndValidate token secret = do
 -- | For docs and tests
 
 -- | Need an IO instance for testing to simulate when a user has authenticated
-instance AuthToken IO where
+instance WithAuthToken IO where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
     secret <- getEnv "HMAC_SECRET"

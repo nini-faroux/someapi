@@ -1,5 +1,5 @@
 module Parse.Validation (
-  Error (..),
+  WithError (..),
   VError (..),
 ) where
 
@@ -23,12 +23,12 @@ data VError
   | InvalidId
   deriving (Show)
 
-class Monad m => Error m where
+class Monad m => WithError m where
   throwError :: Exception e => e -> m a
 
-instance Error App where
+instance WithError App where
   throwError e = liftIO $ throwIO e
 
 -- | For tests
-instance Error IO where
+instance WithError IO where
   throwError = throwIO

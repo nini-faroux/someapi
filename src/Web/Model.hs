@@ -9,7 +9,7 @@
 
 module Web.Model (
   Auth (..),
-  Database,
+  WithDatabase,
   EntityField (..),
   Key (..),
   Note (..),
@@ -140,9 +140,9 @@ class Monad m => RunPool m where
 instance RunPool App where
   runPool query env = liftIO $ runSqlPool query env
 
-type Database env m = (HasConnectionPool env, MonadReader env m, RunPool m)
+type WithDatabase env m = (HasConnectionPool env, MonadReader env m, RunPool m)
 
-runDB :: Database env m => SqlPersistT IO a -> m a
+runDB :: WithDatabase env m => SqlPersistT IO a -> m a
 runDB query = do
   config <- ask
   runPool query $ getConnectionPool config

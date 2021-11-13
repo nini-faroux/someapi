@@ -1,5 +1,5 @@
 module Parse.Authenticate (
-  Password (..),
+  WithPassword (..),
   WithName (..),
   checkUserCredentials,
   checkPassword',
@@ -21,7 +21,7 @@ import Data.Password.Bcrypt (
 import Data.Validation (Validation (..))
 import Database.Esqueleto.Experimental (Entity (..))
 import Parse.UserTypes (Name, makeName)
-import Parse.Validation (Error (..))
+import Parse.Validation (WithError (..))
 import RIO
 import Servant (
   err400,
@@ -30,12 +30,11 @@ import Servant (
   errBody,
  )
 import Web.JWT (
-  AuthToken (..),
   Scope,
   Token,
+  WithAuthToken (..),
  )
-import Web.Model (Auth (..))
-import Web.Query (Database)
+import Web.Model (Auth (..), WithDatabase)
 import qualified Web.Query as Query
 
 class Monad m => WithName m where
@@ -55,7 +54,7 @@ instance WithName App where
       Just _user -> return name
 
 checkUserCredentials ::
-  ( AuthToken m
+  ( WithAuthToken m
   , WithName m
   ) =>
   Maybe Token ->
@@ -67,15 +66,15 @@ checkUserCredentials mToken author = do
   existingName <- checkNameExists name
   return (existingName, scope)
 
-class Monad m => Password m where
+class Monad m => WithPassword m where
   makePassword :: Text -> m (PasswordHash Bcrypt)
 
-instance Password App where
+instance WithPassword App where
   makePassword txt = liftIO $ hashPassword $ mkPassword txt
 
 checkPassword' ::
-  ( Database env m
-  , Error m
+  ( WithDatabase env m
+  , WithError m
   ) =>
   Text ->
   PasswordHash Bcrypt ->
@@ -87,8 +86,8 @@ checkPassword' loginPassword hashPass = do
     PasswordCheckSuccess -> return PasswordCheckSuccess
 
 getAuth ::
-  ( Database env m
-  , Error m
+  ( WithDatabase env m
+  , WithError m
   ) =>
   Name ->
   m (PasswordHash Bcrypt)

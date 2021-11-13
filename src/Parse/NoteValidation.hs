@@ -14,8 +14,8 @@ import Parse.NoteTypes (
  )
 import qualified Parse.UserTypes as UserTypes
 import Parse.Validation (
-  Error (..),
   VError (..),
+  WithError (..),
  )
 import RIO
 import RIO.Time (UTCTime)
@@ -32,7 +32,7 @@ import Web.Model (
  or returns the errors encountered
 -}
 parseNote ::
-  ( Error m
+  ( WithError m
   , WithTime m
   ) =>
   NoteInput ->

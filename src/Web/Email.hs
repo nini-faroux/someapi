@@ -41,7 +41,7 @@ import Text.Ginger (
   toGVal,
  )
 import Text.Ginger.Html (htmlSource)
-import Web.JWT (UserToken (..))
+import Web.JWT (WithUserToken (..))
 import Web.Model (User)
 
 class Monad m => SendMail m where
@@ -56,8 +56,8 @@ type WithMail env m =
   , HasGoogleMail env
   , MonadReader env m
   , SendMail m
-  , UserToken m
   , WithTime m
+  , WithUserToken m
   )
 
 sendActivationLink :: (WithMail env m) => User -> m ()

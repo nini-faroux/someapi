@@ -1,5 +1,5 @@
 module Web.Query (
-  Database,
+  WithDatabase,
   getAuth,
   getFirstDate,
   getNotes,
@@ -47,14 +47,14 @@ import RIO hiding (
  )
 import Web.Model (
   Auth (..),
-  Database,
   EntityField (..),
   Note (..),
   User (..),
+  WithDatabase,
   runDB,
  )
 
-getAuth :: Database env m => Name -> m [Entity Auth]
+getAuth :: WithDatabase env m => Name -> m [Entity Auth]
 getAuth name =
   runDB $
     select $
@@ -67,7 +67,7 @@ getAuth name =
         where_ (user ^. UserActivated ==. val (Just True))
         pure auth
 
-getNotesBetweenDates :: Database env m => Text -> Text -> m [Entity Note]
+getNotesBetweenDates :: WithDatabase env m => Text -> Text -> m [Entity Note]
 getNotesBetweenDates start end = runDB $
   select $
     do
@@ -76,7 +76,7 @@ getNotesBetweenDates start end = runDB $
       where_ (note ^. NoteDateCreated <=. val end)
       pure note
 
-getNotesBetweenDatesWithName :: Database env m => Name -> Text -> Text -> m [Entity Note]
+getNotesBetweenDatesWithName :: WithDatabase env m => Name -> Text -> Text -> m [Entity Note]
 getNotesBetweenDatesWithName name start end = runDB $
   select $
     do
@@ -86,7 +86,7 @@ getNotesBetweenDatesWithName name start end = runDB $
       where_ (note ^. NoteDateCreated <=. val end)
       pure note
 
-getNotesByName :: Database env m => Name -> m [Entity Note]
+getNotesByName :: WithDatabase env m => Name -> m [Entity Note]
 getNotesByName name = runDB $
   select $
     do
@@ -94,7 +94,7 @@ getNotesByName name = runDB $
       where_ (note ^. NoteUserName ==. val name)
       pure note
 
-getFirstDate :: Database env m => m (Maybe Text)
+getFirstDate :: WithDatabase env m => m (Maybe Text)
 getFirstDate = runDB $ do
   days <- select $ do
     note <- from $ table @Note
@@ -104,7 +104,7 @@ getFirstDate = runDB $ do
     [] -> pure Nothing
     (day : _) -> pure $ unValue day
 
-getNotesByDate :: Database env m => Text -> m [Entity Note]
+getNotesByDate :: WithDatabase env m => Text -> m [Entity Note]
 getNotesByDate day = runDB $
   select $
     do
@@ -112,31 +112,31 @@ getNotesByDate day = runDB $
       where_ (note ^. NoteDateCreated ==. val day)
       pure note
 
-insertAuth :: Database env m => P.Key User -> PasswordHash Bcrypt -> m (P.Key Auth)
+insertAuth :: WithDatabase env m => P.Key User -> PasswordHash Bcrypt -> m (P.Key Auth)
 insertAuth userId password = runDB . insert $ Auth {authUserId = userId, authPassword = password}
 
-getNotes :: Database env m => m [Entity Note]
+getNotes :: WithDatabase env m => m [Entity Note]
 getNotes = runDB $ P.selectList [] []
 
-insertNote :: Database env m => Note -> m (P.Key Note)
+insertNote :: WithDatabase env m => Note -> m (P.Key Note)
 insertNote note = runDB $ P.insert note
 
-getUsers :: Database env m => m [Entity User]
+getUsers :: WithDatabase env m => m [Entity User]
 getUsers = runDB $ P.selectList [] []
 
-insertUser :: Database env m => User -> m (P.Key User)
+insertUser :: WithDatabase env m => User -> m (P.Key User)
 insertUser user = runDB $ P.insert user
 
-getUserById :: Database env m => P.Key User -> m (Maybe (Entity User))
+getUserById :: WithDatabase env m => P.Key User -> m (Maybe (Entity User))
 getUserById userId = runDB $ P.selectFirst [UserId P.==. userId] []
 
-getUserByEmail :: Database env m => Email -> m (Maybe (Entity User))
+getUserByEmail :: WithDatabase env m => Email -> m (Maybe (Entity User))
 getUserByEmail email = runDB $ P.selectFirst [UserEmail P.==. email] []
 
-getUserByName :: Database env m => Name -> m (Maybe (Entity User))
+getUserByName :: WithDatabase env m => Name -> m (Maybe (Entity User))
 getUserByName name = runDB $ P.selectFirst [UserName P.==. name] []
 
-updateUserActivatedValue :: Database env m => Email -> Name -> m ()
+updateUserActivatedValue :: WithDatabase env m => Email -> Name -> m ()
 updateUserActivatedValue email name =
   runDB $
     P.updateWhere

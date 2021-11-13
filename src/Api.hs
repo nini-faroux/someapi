@@ -23,8 +23,8 @@ import Database.Esqueleto.Experimental (
   fromSqlKey,
  )
 import Parse.Authenticate (
-  Password (..),
   WithName (..),
+  WithPassword (..),
   checkPassword',
   checkUserCredentials,
   getAuth,
@@ -37,7 +37,7 @@ import Parse.NoteTypes (
 import Parse.NoteValidation (parseNote)
 import Parse.UserTypes (Name)
 import Parse.UserValidation (parseUser)
-import Parse.Validation (Error (..))
+import Parse.Validation (WithError (..))
 import RIO
 import RIO.List (headMaybe)
 import Servant hiding (throwError)
@@ -53,18 +53,18 @@ import Web.Email (
   sendActivationLink,
  )
 import Web.JWT (
-  AuthToken (..),
   Scope (..),
   Token,
-  UserToken (..),
+  WithAuthToken (..),
+  WithUserToken (..),
  )
 import Web.Model (
-  Database,
   Note (..),
   NoteInput (..),
   User (..),
   UserLogin (..),
   UserWithPassword (..),
+  WithDatabase,
  )
 import qualified Web.Query as Query
 
@@ -125,10 +125,10 @@ noteApi = Proxy
  -d '{ "name": "<username>", "email": "<emailAddress>", "password": "<password>"}'
 -}
 createUser ::
-  ( Database env m
-  , Error m
-  , Password m
+  ( WithDatabase env m
+  , WithError m
   , WithMail env m
+  , WithPassword m
   ) =>
   UserWithPassword ->
   m Int64
@@ -151,9 +151,9 @@ createUser uwp@UserWithPassword {..} = do
  -d '{ "loginName": "<userName>", "loginPassword": "password"}'
 -}
 loginUser ::
-  ( AuthToken m
-  , Database env m
-  , Error m
+  ( WithAuthToken m
+  , WithDatabase env m
+  , WithError m
   , WithName m
   ) =>
   UserLogin ->
@@ -175,9 +175,9 @@ loginUser UserLogin {..} = do
  -d '{ "noteAuthor" : "<your userName>", "noteTitle" : "some title", "noteBody": "do something good"}'
 -}
 createNote ::
-  ( AuthToken m
-  , Database env m
-  , Error m
+  ( WithAuthToken m
+  , WithDatabase env m
+  , WithError m
   , WithName m
   , WithTime m
   ) =>
@@ -208,10 +208,10 @@ createNote note@NoteInput {..} mToken = do
  Example: /notes?end=2021-10-6
 -}
 getNotes ::
-  ( AuthToken m
-  , Database env m
-  , Error m
+  ( WithAuthToken m
   , WithDate m
+  , WithDatabase env m
+  , WithError m
   , WithTime m
   ) =>
   Maybe Text ->
@@ -239,10 +239,10 @@ getNotes mStartDate mEndDate mToken = do
  /notes/<authorName>?end=2021-10-6
 -}
 getNotesByName ::
-  ( AuthToken m
-  , Database env m
-  , Error m
+  ( WithAuthToken m
+  , WithDatabase env m
   , WithDate m
+  , WithError m
   , WithName m
   , WithTime m
   ) =>
@@ -264,8 +264,8 @@ getNotesByName noteAuthor mStart mEnd mToken = do
  The user is activated allowing them to authenticate
 -}
 activateUserAccount ::
-  ( Database env m
-  , UserToken m
+  ( WithDatabase env m
+  , WithUserToken m
   ) =>
   MultipartData Mem ->
   m (Maybe (Entity User))
@@ -280,7 +280,7 @@ activateUserAccount formData = do
         nameValuePairs = inputs formData'
         token = maybe "" iValue $ headMaybe nameValuePairs
 
-notesRequest :: (Error m) => m a -> Maybe Name -> NoteRequest -> Scope -> m a
+notesRequest :: (WithError m) => m a -> Maybe Name -> NoteRequest -> Scope -> m a
 notesRequest query mName requestType Scope {..}
   | not protectedAccess = throwError err403 {errBody = "Not Authorised"}
   | requestType == GetNoteRequest = query
@@ -292,9 +292,9 @@ notesRequest query mName requestType Scope {..}
     errorMessage = "Not Authorised - use your own user name to create new notes"
 
 getNotesBetweenDates ::
-  ( Database env m
-  , Error m
+  ( WithDatabase env m
   , WithDate m
+  , WithError m
   , WithTime m
   ) =>
   Maybe Name ->
@@ -324,8 +324,8 @@ getStartAndEndParams start end =
   makeWithDate (Left start) >>= \s -> makeWithDate (Left end) >>= \e -> return (s, e)
 
 makeQuery ::
-  ( Database env m
-  , Error m
+  ( WithDatabase env m
+  , WithError m
   ) =>
   Maybe Name ->
   Text ->
@@ -335,6 +335,8 @@ makeQuery mName start end
   | start > end = throwError err400 {errBody = "Error: end date is before start date"}
   | otherwise = queryBetweenDates mName start end
   where
-    queryBetweenDates :: (Database env m) => Maybe Name -> Text -> Text -> m [Entity Note]
-    queryBetweenDates Nothing start' end' = Query.getNotesBetweenDates start' end'
-    queryBetweenDates (Just name) start' end' = Query.getNotesBetweenDatesWithName name start' end'
+    queryBetweenDates :: (WithDatabase env m) => Maybe Name -> Text -> Text -> m [Entity Note]
+    queryBetweenDates Nothing start' end' =
+      Query.getNotesBetweenDates start' end'
+    queryBetweenDates (Just name) start' end' =
+      Query.getNotesBetweenDatesWithName name start' end'

@@ -1,15 +1,15 @@
 module App (
   App,
-  CommandOptions (..),
-  Config (..),
   AppConfig (..),
+  Config (..),
+  CommandOptions (..),
   DBConfig (..),
   EmailConfig (..),
+  HasAppHostName (..),
+  HasConnectionPool (..),
   HasGoogleMail (..),
   HasSecret (..),
   WithTime (..),
-  HasAppHostName (..),
-  HasConnectionPool (..),
   makeConfig,
 ) where
 
