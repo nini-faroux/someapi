@@ -79,8 +79,8 @@ class Monad m => WithUserToken m where
 
 instance WithUserToken App where
   makeUserToken user time = do
-    config <- ask
-    liftIO $ makeUserToken' user time $ getHmacSecret config
+    secret <- asks getHmacSecret
+    liftIO $ makeUserToken' user time secret
     where
       makeUserToken' :: User -> UTCTime -> String -> IO ByteString
       makeUserToken' User {..} = makeToken claims 7200
@@ -92,8 +92,8 @@ instance WithUserToken App where
             )
 
   verifyUserToken token = do
-    config <- ask
-    eUser <- liftIO $ decodeAndValidateUser (encodeUtf8 token) (getHmacSecret config)
+    secret <- asks getHmacSecret
+    eUser <- liftIO $ decodeAndValidateUser (encodeUtf8 token) secret
     case eUser of
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right user -> return user
@@ -105,8 +105,8 @@ class Monad m => WithAuthToken m where
 instance WithAuthToken App where
   verifyAuthToken Nothing = throwError err400 {errBody = "Token Missing"}
   verifyAuthToken (Just (Token token)) = do
-    config <- ask
-    eScope <- decodeToken token $ getHmacSecret config
+    secret <- asks getHmacSecret
+    eScope <- decodeToken token secret
     case eScope of
       Left err -> throwError err400 {errBody = LB.fromString err}
       Right scope -> return scope
@@ -120,9 +120,9 @@ instance WithAuthToken App where
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
   makeAuthToken existingName = do
-    config <- ask
+    secret <- asks getHmacSecret
     now <- getTime
-    token <- liftIO $ makeToken' scope now $ getHmacSecret config
+    token <- liftIO $ makeToken' scope now secret
     case decodeUtf8' token of
       Left err -> throwError err400 {errBody = LB.fromString $ show err}
       Right token' -> return $ Token token'

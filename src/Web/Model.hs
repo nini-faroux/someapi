@@ -144,8 +144,8 @@ type WithDatabase env m = (HasConnectionPool env, MonadReader env m, RunPool m)
 
 runDB :: WithDatabase env m => SqlPersistT IO a -> m a
 runDB query = do
-  config <- ask
-  runPool query $ getConnectionPool config
+  connPool <- asks getConnectionPool
+  runPool query connPool
 
 runMigrations :: ConnectionString -> IO ()
 runMigrations connectionString = do
