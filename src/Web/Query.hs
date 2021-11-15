@@ -62,12 +62,18 @@ getAuth name =
         (user :& auth) <-
           from $
             table @User `InnerJoin` table @Auth
-              `on` (\(user' :& auth') -> user' ^. UserId ==. auth' ^. AuthUserId)
+              `on` ( \(user' :& auth') ->
+                      user' ^. UserId ==. auth' ^. AuthUserId
+                   )
         where_ (user ^. UserName ==. val name)
         where_ (user ^. UserActivated ==. val (Just True))
         pure auth
 
-getNotesBetweenDates :: WithDatabase env m => Text -> Text -> m [Entity Note]
+getNotesBetweenDates ::
+  WithDatabase env m =>
+  Text ->
+  Text ->
+  m [Entity Note]
 getNotesBetweenDates start end = runDB $
   select $
     do
@@ -76,7 +82,12 @@ getNotesBetweenDates start end = runDB $
       where_ (note ^. NoteDateCreated <=. val end)
       pure note
 
-getNotesBetweenDatesWithName :: WithDatabase env m => Name -> Text -> Text -> m [Entity Note]
+getNotesBetweenDatesWithName ::
+  WithDatabase env m =>
+  Name ->
+  Text ->
+  Text ->
+  m [Entity Note]
 getNotesBetweenDatesWithName name start end = runDB $
   select $
     do
@@ -112,8 +123,13 @@ getNotesByDate day = runDB $
       where_ (note ^. NoteDateCreated ==. val day)
       pure note
 
-insertAuth :: WithDatabase env m => P.Key User -> PasswordHash Bcrypt -> m (P.Key Auth)
-insertAuth userId password = runDB . insert $ Auth {authUserId = userId, authPassword = password}
+insertAuth ::
+  WithDatabase env m =>
+  P.Key User ->
+  PasswordHash Bcrypt ->
+  m (P.Key Auth)
+insertAuth userId password =
+  runDB . insert $ Auth {authUserId = userId, authPassword = password}
 
 getNotes :: WithDatabase env m => m [Entity Note]
 getNotes = runDB $ P.selectList [] []

@@ -122,7 +122,9 @@ noteApi = Proxy
  Example request:
  curl -X POST 'localhost:8000/user' \
  -H 'Content-Type: application/json' \
- -d '{ "name": "<username>", "email": "<emailAddress>", "password": "<password>"}'
+ -d '{ "name": "<username>",
+       "email": "<emailAddress>",
+       "password": "<password>"}'
 -}
 createUser ::
   ( WithDatabase env m
@@ -166,13 +168,17 @@ loginUser UserLogin {..} = do
   makeAuthToken existingName
 
 {- | Endpoint handler for creating new notes, requires an active auth token
- The 'noteAuthor' field in the request's body must be the same as your own user name (the one you are logged in with)
+ The 'noteAuthor' field in the request's body must be the same as your
+ own user name (the one you are logged in with)
  Otherwise the request will be rejected
  Example request:
  curl -X POST 'localhost:8000/note' \
  -H 'Authorization: Bearer "<your token>"' \
  -H 'Content-Type: application/json' \
- -d '{ "noteAuthor" : "<your userName>", "noteTitle" : "some title", "noteBody": "do something good"}'
+ -d '{ "noteAuthor" : "<your userName>",
+       "noteTitle" : "some title",
+       "noteBody": "do something good"
+     }'
 -}
 createNote ::
   ( WithAuthToken m
@@ -190,7 +196,8 @@ createNote note@NoteInput {..} mToken = do
   where
     insertNote = Query.insertNote <=< parseNote
 
-{- | Endpoint handler for fetching notes, requires an active auth token for access
+{- | Endpoint handler for fetching notes,
+    requires an active auth token for access
  * If no query parameters are specified
  then it will return all the notes
  Example request:
@@ -225,14 +232,16 @@ getNotes mStartDate mEndDate mToken = do
     query Nothing Nothing = Query.getNotes
     query js@(Just _startDate) Nothing = getNotesBetweenDates Nothing js Nothing
     query Nothing je@(Just _endDate) = getNotesBetweenDates Nothing Nothing je
-    query js@(Just _startDate) je@(Just _endDate) = getNotesBetweenDates Nothing js je
+    query js@(Just _startDate) je@(Just _endDate) =
+      getNotesBetweenDates Nothing js je
 
 {- | Endpoint handler for fetching notes created by a specific author
  * If no query parameters are specified
  then all the notes from that author will be returned
  Example: /notes/<authorName>
  * If query parameters are provided
- then the notes (for the specified user) will be returned using the same logic as the 'getNotes' endpoint
+ then the notes (for the specified user) will be
+ returned using the same logic as the 'getNotes' endpoint
  Examples:
  /notes/<authorName>?start=2021-8-6&end=2021-10-6
  /notes/<authorName>?start=2021-8-6
@@ -253,12 +262,20 @@ getNotesByName ::
   m [Entity Note]
 getNotesByName noteAuthor mStart mEnd mToken = do
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
-  notesRequest (query existingName mStart mEnd) (Just existingName) GetNoteRequest scope
+  notesRequest
+    (query existingName mStart mEnd)
+    (Just existingName)
+    GetNoteRequest
+    scope
   where
-    query author Nothing Nothing = getNotesBetweenDates (Just author) Nothing Nothing
-    query author js@(Just _startDate) Nothing = getNotesBetweenDates (Just author) js Nothing
-    query author Nothing je@(Just _endDate) = getNotesBetweenDates (Just author) Nothing je
-    query author js@(Just _startDate) je@(Just _endDate) = getNotesBetweenDates (Just author) js je
+    query author Nothing Nothing =
+      getNotesBetweenDates (Just author) Nothing Nothing
+    query author js@(Just _startDate) Nothing =
+      getNotesBetweenDates (Just author) js Nothing
+    query author Nothing je@(Just _endDate) =
+      getNotesBetweenDates (Just author) Nothing je
+    query author js@(Just _startDate) je@(Just _endDate) =
+      getNotesBetweenDates (Just author) js je
 
 {- | Endpoint handler for when the user clicks on the email activation link
  The user is activated allowing them to authenticate
@@ -280,7 +297,13 @@ activateUserAccount formData = do
         nameValuePairs = inputs formData'
         token = maybe "" iValue $ headMaybe nameValuePairs
 
-notesRequest :: (WithError m) => m a -> Maybe Name -> NoteRequest -> Scope -> m a
+notesRequest ::
+  (WithError m) =>
+  m a ->
+  Maybe Name ->
+  NoteRequest ->
+  Scope ->
+  m a
 notesRequest query mName requestType Scope {..}
   | not protectedAccess = throwError err403 {errBody = "Not Authorised"}
   | requestType == GetNoteRequest = query
@@ -321,7 +344,8 @@ getNotesBetweenDates mName Nothing (Just endDate) = do
 
 getStartAndEndParams :: (WithDate m) => Text -> Text -> m (Text, Text)
 getStartAndEndParams start end =
-  makeWithDate (Left start) >>= \s -> makeWithDate (Left end) >>= \e -> return (s, e)
+  makeWithDate (Left start) >>= \s ->
+    makeWithDate (Left end) >>= \e -> return (s, e)
 
 makeQuery ::
   ( WithDatabase env m
@@ -332,10 +356,16 @@ makeQuery ::
   Text ->
   m [Entity Note]
 makeQuery mName start end
-  | start > end = throwError err400 {errBody = "Error: end date is before start date"}
+  | start > end =
+    throwError err400 {errBody = "Error: end date is before start date"}
   | otherwise = queryBetweenDates mName start end
   where
-    queryBetweenDates :: (WithDatabase env m) => Maybe Name -> Text -> Text -> m [Entity Note]
+    queryBetweenDates ::
+      (WithDatabase env m) =>
+      Maybe Name ->
+      Text ->
+      Text ->
+      m [Entity Note]
     queryBetweenDates Nothing start' end' =
       Query.getNotesBetweenDates start' end'
     queryBetweenDates (Just name) start' end' =

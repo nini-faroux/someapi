@@ -4,9 +4,9 @@ import Api (noteApi)
 import App (
   CommandOptions (..),
   Config (Config, appConfig, dbConfig),
-  makeConfig,
   appPort,
-  connectionString
+  connectionString,
+  makeConfig,
  )
 import Docs.Docs (writeSwaggerJSON)
 import Network.Wai.Handler.Warp (run)
@@ -32,7 +32,11 @@ main = execParser options >>= runApp
   where
     parser =
       Options
-        <$> switch (short 'd' <> long "docs" <> help "Write the swagger docs for current API")
+        <$> switch
+          ( short 'd'
+              <> long "docs"
+              <> help "Write the swagger docs for current API"
+          )
     options =
       info
         (helper <*> parser)

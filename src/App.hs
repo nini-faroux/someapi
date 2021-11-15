@@ -15,12 +15,22 @@ module App (
 
 import Control.Monad.Logger (runStdoutLoggingT)
 import qualified Data.ByteString.Char8 as LC
-import Database.Persist.Postgresql (ConnectionPool, ConnectionString, createPostgresqlPool)
-import Environment (EnvVars, getEnvVars)
+import Database.Persist.Postgresql (
+  ConnectionPool,
+  ConnectionString,
+  createPostgresqlPool,
+ )
+import Environment (
+  EnvVars,
+  getEnvVars,
+ )
 import qualified Environment as E
 import Network.Wai.Handler.Warp (Port)
 import RIO
-import RIO.Time (UTCTime, getCurrentTime)
+import RIO.Time (
+  UTCTime,
+  getCurrentTime,
+ )
 
 type App = RIO Config
 

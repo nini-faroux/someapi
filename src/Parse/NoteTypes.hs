@@ -63,7 +63,8 @@ newtype Month = Month Int deriving (Eq, Ord, Read, Generic)
 newtype DateField = DateField Int deriving (Eq, Ord, Read, Generic)
 
 instance Show Date where
-  show (Date year month date) = show year ++ ":" ++ show month ++ ":" ++ show date
+  show (Date year month date) =
+    show year ++ ":" ++ show month ++ ":" ++ show date
 
 instance Show Year where
   show (Year year) = show year
@@ -102,22 +103,37 @@ instance WithDate App where
       Left dateText -> makeWithDate' validateDate dateText
       Right dateInput -> makeWithDate' validateDate' dateInput
     where
-      makeWithDate' f date = checkSuccess f date (\err -> throwError err400 {errBody = LB.fromString $ show err}) return
+      makeWithDate' f date =
+        checkSuccess
+          f
+          date
+          (\err -> throwError err400 {errBody = LB.fromString $ show err})
+          return
 
 validateDate' :: DateInput -> Validation [VError] Text
 validateDate' DateInput {..} =
-  let date = Date <$> makeYear dateYear <*> makeMonth dateMonth <*> makeDayField dateDay
+  let date =
+        Date <$> makeYear dateYear
+          <*> makeMonth dateMonth
+          <*> makeDayField dateDay
    in checkSuccess id date Failure (Success . T.pack . show)
 
 validateDate :: Text -> Validation [VError] Text
 validateDate = validateDate' . makeDateInputFromText
   where
     makeDateInputFromText :: Text -> DateInput
-    makeDateInputFromText dateParam = DateInput (fromMaybe 0 year) (fromMaybe 0 month) (fromMaybe 0 date)
+    makeDateInputFromText dateParam =
+      DateInput (fromMaybe 0 year) (fromMaybe 0 month) (fromMaybe 0 date)
       where
-        year = readMaybe $ take 4 dateParam' :: Maybe Integer
-        month = readMaybe $ takeWhile isDigit $ drop 5 dateParam' :: Maybe Int
-        date = readMaybe $ takeWhile isDigit $ drop 1 $ dropWhile isDigit $ drop 5 dateParam' :: Maybe Int
+        year =
+          readMaybe $ take 4 dateParam' :: Maybe Integer
+        month =
+          readMaybe $ takeWhile isDigit $ drop 5 dateParam' :: Maybe Int
+        date =
+          readMaybe $
+            takeWhile isDigit $
+              drop 1 $ dropWhile isDigit $ drop 5 dateParam' ::
+            Maybe Int
         dateParam' = T.unpack dateParam
 
 checkSuccess :: (a -> Validation f s) -> a -> (f -> r) -> (s -> r) -> r

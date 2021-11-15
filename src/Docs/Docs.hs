@@ -77,7 +77,8 @@ import Web.Model (
  )
 
 writeSwaggerJSON :: IO ()
-writeSwaggerJSON = LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
+writeSwaggerJSON =
+  LB.writeFile "swagger-docs/api.json" (encodePretty userSwagger)
 
 userSwagger :: Swagger
 userSwagger =
@@ -168,7 +169,12 @@ instance ToSchema Token where
       & mapped . schema . description ?~ "User token"
       & mapped . schema . example ?~ toJSON tokenSample
 
-instance HasSwagger (MultipartForm Mem (MultipartData Mem) :> Post '[JSON] (Maybe (Entity User))) where
+instance
+  HasSwagger
+    ( MultipartForm Mem (MultipartData Mem)
+        :> Post '[JSON] (Maybe (Entity User))
+    )
+  where
   toSwagger _ = mempty
 
 instance ToSchema (Entity User) where
@@ -202,7 +208,13 @@ userSample :: User
 userSample = User nameSample emailSample (Just True)
 
 noteSample :: Note
-noteSample = Note nameSample noteTitleSample noteBodySample (makeUTCTime (2021, 9, 30) (20, 42, 0)) dateSample
+noteSample =
+  Note
+    nameSample
+    noteTitleSample
+    noteBodySample
+    (makeUTCTime (2021, 9, 30) (20, 42, 0))
+    dateSample
 
 noteInputSample :: NoteInput
 noteInputSample = NoteInput "nini" "some name" "do something good"

@@ -44,8 +44,27 @@ parseUser uwp@UserWithPassword {..} = do
     Success user ->
       if null emailExistsError && null nameExistsError && null passwordError
         then return user
-        else throwError err400 {errBody = errorsToBS [emailExistsError, nameExistsError, passwordError]}
-    Failure userErrors -> throwError err400 {errBody = errorsToBS [userErrors, emailExistsError, nameExistsError, passwordError]}
+        else
+          throwError
+            err400
+              { errBody =
+                  errorsToBS
+                    [ emailExistsError
+                    , nameExistsError
+                    , passwordError
+                    ]
+              }
+    Failure userErrors ->
+      throwError
+        err400
+          { errBody =
+              errorsToBS
+                [ userErrors
+                , emailExistsError
+                , nameExistsError
+                , passwordError
+                ]
+          }
   where
     existsError ::
       (WithDatabase env m) =>

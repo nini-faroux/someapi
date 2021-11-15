@@ -8,24 +8,54 @@ import Data.Fixed (Pico)
 import Data.String (IsString)
 import Data.Validation
 import qualified Database.Persist as P
-import Database.Persist.Sql (BackendKey (SqlBackendKey), Entity (..), toSqlKey)
-import Network.HTTP.Client hiding (Proxy, responseBody)
+import Database.Persist.Sql (
+  BackendKey (SqlBackendKey),
+  Entity (..),
+  toSqlKey,
+ )
+import Network.HTTP.Client hiding (
+  Proxy,
+  responseBody,
+ )
 import Network.Wai.Handler.Warp
 import Parse.NoteTypes (DateInput (..))
-import Parse.UserTypes (emailSample, nameSample, nameSample2)
+import Parse.UserTypes (
+  emailSample,
+  nameSample,
+  nameSample2,
+ )
 import RIO
-import RIO.Time (TimeOfDay (TimeOfDay), UTCTime (UTCTime), fromGregorian, getCurrentTime, timeOfDayToTime)
+import RIO.Time (
+  TimeOfDay (TimeOfDay),
+  UTCTime (UTCTime),
+  fromGregorian,
+  getCurrentTime,
+  timeOfDayToTime,
+ )
 import Servant
 import Servant.Client
-import System.Environment (getEnv, setEnv, unsetEnv)
+import System.Environment (
+  getEnv,
+  setEnv,
+  unsetEnv,
+ )
 import Test.Hspec
 import Test.Hspec.Wai
 import Test.Hspec.Wai.JSON
-import Web.JWT (AuthToken (..), Scope (..), Token (..))
+import Web.JWT (
+  AuthToken (..),
+  Scope (..),
+  Token (..),
+ )
 import Web.Model
-import Web.Server (hoistAppServer, noteServer)
+import Web.Server (
+  hoistAppServer,
+  noteServer,
+ )
 
-{- | Sets the required env vars locally, runs the tests, then unsets the env vars.
+{- | Sets the required env vars locally,
+    runs the tests,
+    then unsets the env vars.
   To run the tests:
   $ ./setup-integration-test.sh
   $ stack test :integration-test
@@ -49,9 +79,11 @@ apiInteractionTest = do
       \_port -> do
         result <- runClientM (createUser malformedUser) clientEnv
         case result of
-          Left (FailureResponse _ response) -> do
-            liftIO $ print $ responseBody response
-            responseBody response `shouldBe` "[InvalidName,InvalidEmail,InvalidPassword]"
+          Left (FailureResponse _ response) ->
+            do
+              liftIO $ print $ responseBody response
+              responseBody response
+              `shouldBe` "[InvalidName,InvalidEmail,InvalidPassword]"
           Right res -> liftIO $ print res
           _ -> liftIO $ print result
   describe "POST /user" $
@@ -86,9 +118,11 @@ apiInteractionTest = do
       \_port -> do
         result <- runClientM (loginUser $ UserLogin "nini" "password") clientEnv
         case result of
-          Left (FailureResponse _ response) -> do
-            liftIO $ print $ responseBody response
-            responseBody response `shouldBe` "Incorrect username or password, or account not yet activated"
+          Left (FailureResponse _ response) ->
+            do
+              liftIO $ print $ responseBody response
+              responseBody response
+              `shouldBe` "Incorrect username or password, or account not yet activated"
           Right res -> print "ok"
   -- Use makeAuthToken directly here for testing.
   -- In the app this is called when the user successfully authenticates,
@@ -133,9 +167,11 @@ apiInteractionTest = do
         let note = NoteInput "laurie" "some note" "do something else"
         result <- runClientM (createNote note (Just token)) clientEnv
         case result of
-          Left (FailureResponse _ response) -> do
-            liftIO $ print $ responseBody response
-            responseBody response `shouldBe` "Not Authorised - use your own user name to create new notes"
+          Left (FailureResponse _ response) ->
+            do
+              liftIO $ print $ responseBody response
+              responseBody response
+              `shouldBe` "Not Authorised - use your own user name to create new notes"
           Right res -> liftIO $ print res
   describe "GET /notes" $
     it "should retrieve all notes" $
@@ -152,7 +188,8 @@ apiInteractionTest = do
     it "should retrieve all notes created after given date" $
       \_port -> do
         token <- makeAuthToken nameSample2
-        result <- runClientM (getNotes (Just "2021-10-6") Nothing (Just token)) clientEnv
+        result <-
+          runClientM (getNotes (Just "2021-10-6") Nothing (Just token)) clientEnv
         case result of
           Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response
@@ -163,7 +200,10 @@ apiInteractionTest = do
     it "should retrieve all notes created between two dates" $
       \_port -> do
         token <- makeAuthToken nameSample2
-        result <- runClientM (getNotes (Just "2021-10-6") (Just "2021-10-7") (Just token)) clientEnv
+        result <-
+          runClientM
+            (getNotes (Just "2021-10-6") (Just "2021-10-7") (Just token))
+            clientEnv
         case result of
           Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response
@@ -174,7 +214,10 @@ apiInteractionTest = do
     it "should retrieve all notes created before_ given date" $
       \_port -> do
         token <- makeAuthToken nameSample2
-        result <- runClientM (getNotes Nothing (Just "2021-10-7") (Just token)) clientEnv
+        result <-
+          runClientM
+            (getNotes Nothing (Just "2021-10-7") (Just token))
+            clientEnv
         case result of
           Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response
@@ -185,7 +228,10 @@ apiInteractionTest = do
     it "should successfully retrieve note created by supplied user name" $
       \_port -> do
         token <- makeAuthToken nameSample
-        result <- runClientM (getNotesByName "laurie" Nothing Nothing (Just token)) clientEnv
+        result <-
+          runClientM
+            (getNotesByName "laurie" Nothing Nothing (Just token))
+            clientEnv
         case result of
           Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response
@@ -193,10 +239,20 @@ apiInteractionTest = do
             liftIO $ print resultKey
             resultKey `shouldBe` 2
   describe "GET /notes/laurie?start=2021-8-2" $
-    it "should successfully retrieve notes created by supplied user name after given date" $
-      \_port -> do
+    it
+      "should successfully retrieve notes created"
+      ++ "by supplied user name after given date"
+      $ \_port -> do
         token <- makeAuthToken nameSample
-        result <- runClientM (getNotesByName "laurie" (Just "2021-8-2") Nothing (Just token)) clientEnv
+        result <-
+          runClientM
+            ( getNotesByName
+                "laurie"
+                (Just "2021-8-2")
+                Nothing
+                (Just token)
+            )
+            clientEnv
         case result of
           Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response
@@ -204,10 +260,15 @@ apiInteractionTest = do
             let numberOfNotes = length res
             numberOfNotes `shouldBe` 1
   describe "GET /notes/laurie?end=2021-8-2" $
-    it "should successfully retrieve notes created by supplied user name before given date" $
-      \_port -> do
+    it
+      "should successfully retrieve notes created"
+      ++ "by supplied user name before given date"
+      $ \_port -> do
         token <- makeAuthToken nameSample
-        result <- runClientM (getNotesByName "laurie" Nothing (Just "2021-8-2") (Just token)) clientEnv
+        result <-
+          runClientM
+            (getNotesByName "laurie" Nothing (Just "2021-8-2") (Just token))
+            clientEnv
         case result of
           Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response

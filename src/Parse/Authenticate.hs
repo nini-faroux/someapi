@@ -98,4 +98,5 @@ getAuth name = do
     _err -> throwError err401 {errBody = authErrorMessage}
 
 authErrorMessage :: LB.ByteString
-authErrorMessage = "Incorrect username or password, or account not yet activated"
+authErrorMessage =
+  "Incorrect username or password, or account not yet activated"

@@ -72,7 +72,8 @@ sendActivationLink user = do
   where
     host = "smtp.gmail.com"
     from = Address Nothing
-    to = [Address (Just (renderName user.userName)) (renderEmail user.userEmail)]
+    to =
+      [Address (Just (renderName user.userName)) (renderEmail user.userEmail)]
     cc = []
     bcc = []
     subject = "SomeAPI Account Activation"
@@ -80,7 +81,8 @@ sendActivationLink user = do
     urlText token appHostName' =
       case decodeUtf8' token of
         Left _err -> error "Utf8 decoding error"
-        Right token' -> renderTokenTemplate tokenTemplate $ context token' appHostName'
+        Right token' ->
+          renderTokenTemplate tokenTemplate $ context token' appHostName'
     getEmailDetails :: (WithMail env m) => env -> m (UserName, Text, Password)
     getEmailDetails config = do
       let gmail = getGoogleMail config
@@ -95,7 +97,9 @@ renderTokenTemplate template contextMap =
 
 tokenTemplate :: Template SourcePos
 tokenTemplate =
-  either (error . show) id . runIdentity $ parseGinger nullResolver Nothing form
+  either (error . show) id
+    . runIdentity
+    $ parseGinger nullResolver Nothing form
   where
     form =
       "<form method=post action={{ appHostName }}" ++ "activate>"
@@ -104,9 +108,14 @@ tokenTemplate =
         ++ "</form>"
 
 context :: Text -> Text -> HashMap Text Text
-context token host = HashMap.fromList [("token", token), ("appHostName", host)]
+context token host =
+  HashMap.fromList [("token", token), ("appHostName", host)]
 
-scopeLookup :: (Hashable k, Eq k, ToGVal m b) => k -> HashMap.HashMap k b -> GVal m
+scopeLookup ::
+  (Hashable k, Eq k, ToGVal m b) =>
+  k ->
+  HashMap.HashMap k b ->
+  GVal m
 scopeLookup key context' = toGVal $ HashMap.lookup key context'
 
 nullResolver :: IncludeResolver Identity

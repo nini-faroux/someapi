@@ -57,9 +57,19 @@ newtype Token = Token {token :: Text}
   deriving (Generic, FromHttpApiData, ToHttpApiData)
 
 type UserJwt =
-  Jwt '["userName" ->> Name, "userEmail" ->> Email, "userActivated" ->> Maybe Bool] 'NoNs
+  Jwt
+    '[ "userName" ->> Name
+     , "userEmail" ->> Email
+     , "userActivated" ->> Maybe Bool
+     ]
+    'NoNs
 
-type AuthJwt = Jwt '["protectedAccess" ->> Bool, "tokenUserName" ->> Name] 'NoNs
+type AuthJwt =
+  Jwt
+    '[ "protectedAccess" ->> Bool
+     , "tokenUserName" ->> Name
+     ]
+    'NoNs
 
 instance ToPrivateClaims User
 
@@ -115,8 +125,15 @@ instance WithAuthToken App where
       -- otherwise in that case it will raise a decoding error
       decodeToken token' secret'
         | hasBearerPrefix token' =
-          liftIO $ decodeAndValidateAuth (encodeUtf8 $ T.init $ T.drop 8 token') secret'
-        | otherwise = liftIO $ decodeAndValidateAuth (encodeUtf8 token') secret'
+          liftIO $
+            decodeAndValidateAuth
+              (encodeUtf8 $ T.init $ T.drop 8 token')
+              secret'
+        | otherwise =
+          liftIO $
+            decodeAndValidateAuth
+              (encodeUtf8 token')
+              secret'
       hasBearerPrefix token' = T.take 6 token' == "Bearer"
 
   makeAuthToken existingName = do
@@ -132,7 +149,8 @@ instance WithAuthToken App where
 makeToken' :: Scope -> UTCTime -> String -> IO ByteString
 makeToken' Scope {..} = makeToken claims 900
   where
-    claims = (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
+    claims =
+      (#protectedAccess ->> protectedAccess, #tokenUserName ->> tokenUserName)
 
 makeToken ::
   (Encode (PrivateClaims (Claims a) (OutNs a)), ToPrivateClaims a) =>
@@ -178,7 +196,10 @@ decodeAndValidateAuth' = decodeAndValidate
 
 decodeAndValidateFull ::
   (Show e, FromPrivateClaims b) =>
-  (ByteString -> String -> IO (ValidationNEL e (Validated (Jwt (Claims b) namespace)))) ->
+  ( ByteString ->
+    String ->
+    IO (ValidationNEL e (Validated (Jwt (Claims b) namespace)))
+  ) ->
   ByteString ->
   String ->
   IO (Either String b)
