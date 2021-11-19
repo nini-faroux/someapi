@@ -39,13 +39,13 @@ parseNote ::
   m Note
 parseNote noteInput = do
   time' <- getTime
-  dayInput <- makeDateInput
-  case validNote noteInput time' dayInput of
+  dateInput <- makeDateInput
+  case validNote noteInput time' dateInput of
     Failure errs -> throwError err400 {errBody = errorsToBS errs}
     Success note -> return note
   where
     errorsToBS :: [VError] -> LB.ByteString
-    errorsToBS ess = LB.fromString $ show ess
+    errorsToBS = LB.fromString . show
 
 -- Produces either a valid note
 -- or accumulates any validation errors, encountered at each step, in a list
