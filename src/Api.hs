@@ -331,7 +331,7 @@ getNotesBetweenDates mName (Just startDate) (Just endDate) = do
   makeQuery mName start end
 getNotesBetweenDates mName (Just startDate) Nothing = do
   dateInput <- makeDateInput
-  end <- makeWithDate (Right dateInput)
+  end <- makeDate $ Right dateInput
   (start, end') <- getStartAndEndParams startDate end
   makeQuery mName start end'
 getNotesBetweenDates mName Nothing (Just endDate) = do
@@ -339,13 +339,12 @@ getNotesBetweenDates mName Nothing (Just endDate) = do
   case mStart of
     Nothing -> Query.getNotes
     Just start -> do
-      end <- makeWithDate $ Left endDate
+      end <- makeDate $ Left endDate
       makeQuery mName start end
 
 getStartAndEndParams :: (WithDate m) => Text -> Text -> m (Text, Text)
 getStartAndEndParams start end =
-  makeWithDate (Left start) >>= \s ->
-    makeWithDate (Left end) >>= \e -> return (s, e)
+  makeDate (Left start) >>= \s -> makeDate (Left end) >>= \e -> return (s, e)
 
 makeQuery ::
   ( WithDatabase env m

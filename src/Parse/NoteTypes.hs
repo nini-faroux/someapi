@@ -95,15 +95,15 @@ makeDateInput = do
   return $ DateInput year month date
 
 class Monad m => WithDate m where
-  makeWithDate :: Either Text DateInput -> m Text
+  makeDate :: Either Text DateInput -> m Text
 
 instance WithDate App where
-  makeWithDate eDate =
+  makeDate eDate =
     case eDate of
-      Left dateText -> makeWithDate' validateDate dateText
-      Right dateInput -> makeWithDate' validateDate' dateInput
+      Left dateText -> makeDate' validateDate dateText
+      Right dateInput -> makeDate' validateDate' dateInput
     where
-      makeWithDate' f date =
+      makeDate' f date =
         checkSuccess
           f
           date
