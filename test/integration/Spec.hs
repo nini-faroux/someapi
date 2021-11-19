@@ -1,12 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import Api
-import App
+import Api (
+  CreateNote,
+  CreateUser,
+  GetNotes,
+  GetNotesByName,
+  LoginUser,
+ )
 import qualified Data.ByteString.Lazy.UTF8 as LB
-import Data.Fixed (Pico)
-import Data.String (IsString)
-import Data.Validation
 import qualified Database.Persist as P
 import Database.Persist.Sql (
   BackendKey (SqlBackendKey),
@@ -17,7 +19,6 @@ import Network.HTTP.Client hiding (
   Proxy,
   responseBody,
  )
-import Network.Wai.Handler.Warp
 import Parse.NoteTypes (DateInput (..))
 import Parse.UserTypes (
   emailSample,
@@ -32,22 +33,38 @@ import RIO.Time (
   getCurrentTime,
   timeOfDayToTime,
  )
-import Servant
-import Servant.Client
+import Servant.Client (
+  ClientError (FailureResponse),
+  baseUrlPort,
+  client,
+  mkClientEnv,
+  parseBaseUrl,
+  responseBody,
+  runClientM,
+ )
 import System.Environment (
-  getEnv,
   setEnv,
   unsetEnv,
  )
-import Test.Hspec
-import Test.Hspec.Wai
-import Test.Hspec.Wai.JSON
-import Web.JWT (
-  WithAuthToken (..),
-  Scope (..),
-  Token (..),
+import Test.Hspec (
+  Spec,
+  describe,
+  hspec,
+  it,
+  runIO,
+  shouldBe,
  )
-import Web.Model
+import Web.JWT (
+  Token (..),
+  WithAuthToken (..),
+ )
+import Web.Model (
+  Key (NoteKey),
+  NoteInput (..),
+  User (..),
+  UserLogin (..),
+  UserWithPassword (..),
+ )
 import Web.Server (
   hoistAppServer,
   noteServer,
@@ -239,8 +256,10 @@ apiInteractionTest = do
             liftIO $ print resultKey
             resultKey `shouldBe` 2
   describe "GET /notes/laurie?start=2021-8-2" $
-    it ("should successfully retrieve notes created"
-      ++ "by supplied user name after given date")
+    it
+      ( "should successfully retrieve notes created"
+          ++ "by supplied user name after given date"
+      )
       $ \_port -> do
         token <- makeAuthToken nameSample
         result <-
@@ -259,8 +278,10 @@ apiInteractionTest = do
             let numberOfNotes = length res
             numberOfNotes `shouldBe` 1
   describe "GET /notes/laurie?end=2021-8-2" $
-    it ("should successfully retrieve notes created"
-      ++ "by supplied user name before given date")
+    it
+      ( "should successfully retrieve notes created"
+          ++ "by supplied user name before given date"
+      )
       $ \_port -> do
         token <- makeAuthToken nameSample
         result <-
