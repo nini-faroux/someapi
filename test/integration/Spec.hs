@@ -43,7 +43,7 @@ import Test.Hspec
 import Test.Hspec.Wai
 import Test.Hspec.Wai.JSON
 import Web.JWT (
-  AuthToken (..),
+  WithAuthToken (..),
   Scope (..),
   Token (..),
  )
@@ -83,7 +83,7 @@ apiInteractionTest = do
             do
               liftIO $ print $ responseBody response
               responseBody response
-              `shouldBe` "[InvalidName,InvalidEmail,InvalidPassword]"
+                `shouldBe` "[InvalidName,InvalidEmail,InvalidPassword]"
           Right res -> liftIO $ print res
           _ -> liftIO $ print result
   describe "POST /user" $
@@ -122,7 +122,7 @@ apiInteractionTest = do
             do
               liftIO $ print $ responseBody response
               responseBody response
-              `shouldBe` "Incorrect username or password, or account not yet activated"
+                `shouldBe` "Incorrect username or password, or account not yet activated"
           Right res -> print "ok"
   -- Use makeAuthToken directly here for testing.
   -- In the app this is called when the user successfully authenticates,
@@ -171,7 +171,7 @@ apiInteractionTest = do
             do
               liftIO $ print $ responseBody response
               responseBody response
-              `shouldBe` "Not Authorised - use your own user name to create new notes"
+                `shouldBe` "Not Authorised - use your own user name to create new notes"
           Right res -> liftIO $ print res
   describe "GET /notes" $
     it "should retrieve all notes" $
@@ -239,9 +239,8 @@ apiInteractionTest = do
             liftIO $ print resultKey
             resultKey `shouldBe` 2
   describe "GET /notes/laurie?start=2021-8-2" $
-    it
-      "should successfully retrieve notes created"
-      ++ "by supplied user name after given date"
+    it ("should successfully retrieve notes created"
+      ++ "by supplied user name after given date")
       $ \_port -> do
         token <- makeAuthToken nameSample
         result <-
@@ -260,9 +259,8 @@ apiInteractionTest = do
             let numberOfNotes = length res
             numberOfNotes `shouldBe` 1
   describe "GET /notes/laurie?end=2021-8-2" $
-    it
-      "should successfully retrieve notes created"
-      ++ "by supplied user name before given date"
+    it ("should successfully retrieve notes created"
+      ++ "by supplied user name before given date")
       $ \_port -> do
         token <- makeAuthToken nameSample
         result <-
