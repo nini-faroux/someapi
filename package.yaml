@@ -54,6 +54,8 @@ dependencies:
 - hspec-wai-json
 - optparse-applicative
 - resource-pool
+- co-log
+- generic-lens
 
 library:
   source-dirs: src

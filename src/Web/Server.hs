@@ -14,7 +14,7 @@ import Api (
   noteApi,
  )
 import App (
-  App,
+  App (unApp),
   Config,
  )
 import Control.Monad.Except (ExceptT (..))
@@ -30,9 +30,9 @@ noteServer =
     :<|> createNote
     :<|> getNotesByName
 
--- | Conversion function from the RIO monad to Servant's ExceptT based monad
-hoistAppServer :: Config -> Server NoteAPI
+-- | Conversion function from the ReaderT monad to Servant's ExceptT based monad
+hoistAppServer :: Config App -> Server NoteAPI
 hoistAppServer config = hoistServer noteApi (transform config) noteServer
   where
-    transform :: Config -> App a -> Handler a
-    transform config' app = Handler $ ExceptT $ try $ runRIO config' app
+    transform :: Config App -> App a -> Handler a
+    transform config' app = Handler $ ExceptT $ try $ runReaderT (unApp app) config'

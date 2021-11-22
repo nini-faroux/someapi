@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 {-# OPTIONS_GHC -F -pgmF=record-dot-preprocessor #-}
 
 module Api (
@@ -17,6 +18,12 @@ module Api (
 ) where
 
 import App (WithTime (..))
+import Colog (
+  Message,
+  WithLog,
+  log,
+  pattern I,
+ )
 import Database.Esqueleto.Experimental (
   Entity (..),
   Key,
@@ -38,7 +45,7 @@ import Parse.NoteValidation (parseNote)
 import Parse.UserTypes (Name)
 import Parse.UserValidation (parseUser)
 import Parse.Validation (WithError (..))
-import RIO
+import RIO hiding (log)
 import RIO.List (headMaybe)
 import Servant hiding (throwError)
 import Servant.Multipart (
@@ -156,11 +163,13 @@ loginUser ::
   ( WithAuthToken m
   , WithDatabase env m
   , WithError m
+  , WithLog env Message m
   , WithName m
   ) =>
   UserLogin ->
   m Token
 loginUser UserLogin {..} = do
+  log I $ "logging in " <> loginName
   name <- makeValidName loginName
   existingName <- checkNameExists name
   hashPass <- getAuth existingName

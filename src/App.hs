@@ -1,5 +1,13 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
+
 module App (
-  App,
+  App (..),
   AppConfig (..),
   Config (..),
   CommandOptions (..),
@@ -13,8 +21,15 @@ module App (
   makeConfig,
 ) where
 
+import Colog (
+  HasLog (..),
+  LogAction,
+  Message,
+  richMessageAction,
+ )
 import Control.Monad.Logger (runStdoutLoggingT)
 import qualified Data.ByteString.Char8 as LC
+import Data.Generics.Product (field)
 import Database.Persist.Postgresql (
   ConnectionPool,
   ConnectionString,
@@ -32,18 +47,29 @@ import RIO.Time (
   getCurrentTime,
  )
 
-type App = RIO Config
+newtype App a = App
+  {unApp :: ReaderT (Config App) IO a}
+  deriving newtype
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadIO
+    , MonadReader (Config App)
+    )
 
-data Config = Config
-  { appConfig :: !AppConfig
+data Config m = Config
+  { appConfig :: !(AppConfig m)
   , dbConfig :: !DBConfig
   , emailConfig :: !EmailConfig
   }
+  deriving (Generic)
 
-data AppConfig = AppConfig
+data AppConfig m = AppConfig
   { appPort :: !Port
   , appHostName :: !Text
+  , configLogAction :: !(LogAction m Message)
   }
+  deriving (Generic)
 
 data DBConfig = DBConfig
   { connectionPool :: !ConnectionPool
@@ -53,14 +79,16 @@ data DBConfig = DBConfig
   , postgresPass :: !String
   , postgresUser :: !String
   }
+  deriving (Generic)
 
 data EmailConfig = EmailConfig
   { googleMail :: !String
   , googlePass :: !String
   , hmacSecret :: !String
   }
+  deriving (Generic)
 
-makeConfig :: IO Config
+makeConfig :: MonadIO m => IO (Config m)
 makeConfig = do
   envVars <- getEnvVars
   pool' <- makePool envVars
@@ -70,6 +98,7 @@ makeConfig = do
           AppConfig
             { appPort = 8080
             , appHostName = E.appHostName envVars
+            , configLogAction = richMessageAction
             }
       , dbConfig =
           DBConfig
@@ -107,30 +136,38 @@ makeConfig = do
     postgresDb' = E.postgresDb
     postgresPass' = E.postgresPass
 
+instance HasLog (Config m) Message m where
+  getLogAction :: Config m -> LogAction m Message
+  getLogAction = configLogAction . appConfig
+
+  setLogAction :: LogAction m Message -> Config m -> Config m
+  setLogAction newLogAction config =
+    config & field @"appConfig" . field @"configLogAction" .~ newLogAction
+
 class HasConnectionPool env where
   getConnectionPool :: env -> ConnectionPool
 
-instance HasConnectionPool Config where
+instance HasConnectionPool (Config m) where
   getConnectionPool = connectionPool . dbConfig
 
 class HasAppHostName env where
   getAppHostName :: env -> Text
 
-instance HasAppHostName Config where
+instance HasAppHostName (Config m) where
   getAppHostName = appHostName . appConfig
 
 class HasGoogleMail env where
   getGoogleMail :: env -> String
   getGooglePass :: env -> String
 
-instance HasGoogleMail Config where
+instance HasGoogleMail (Config m) where
   getGoogleMail = googleMail . emailConfig
   getGooglePass = googlePass . emailConfig
 
 class HasSecret env where
   getHmacSecret :: env -> String
 
-instance HasSecret Config where
+instance HasSecret (Config m) where
   getHmacSecret = hmacSecret . emailConfig
 
 class Monad m => WithTime m where

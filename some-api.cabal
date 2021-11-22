@@ -56,9 +56,11 @@ library
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
+    , co-log
     , either
     , email-validate
     , esqueleto
+    , generic-lens
     , ginger
     , hspec
     , hspec-wai
@@ -113,9 +115,11 @@ executable some-api-exe
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
+    , co-log
     , either
     , email-validate
     , esqueleto
+    , generic-lens
     , ginger
     , hspec
     , hspec-wai
@@ -168,9 +172,11 @@ test-suite integration-test
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
+    , co-log
     , either
     , email-validate
     , esqueleto
+    , generic-lens
     , ginger
     , hspec
     , hspec-wai
@@ -223,9 +229,11 @@ test-suite unit-test
     , aeson-pretty
     , base >=4.7 && <5
     , bytestring
+    , co-log
     , either
     , email-validate
     , esqueleto
+    , generic-lens
     , ginger
     , hspec
     , hspec-wai
