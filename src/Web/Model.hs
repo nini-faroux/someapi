@@ -66,7 +66,9 @@ import RIO.Time (UTCTime)
 import Say (say)
 
 PTH.share
-  [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"]
+  [PTH.mkPersist PTH.sqlSettings,
+   PTH.mkMigrate "migrateAll"
+  ]
   [PTH.persistLowerCase|
   User json
     name Name
@@ -77,9 +79,8 @@ PTH.share
     deriving Eq Show Read Generic
 
   Auth
-    userId (Key User)
+    userId (Key User) OnDeleteCascade
     password (PasswordHash Bcrypt)
-    UniqueUserId userId
     deriving Eq
 
   Note json
@@ -88,6 +89,8 @@ PTH.share
     noteBody NoteBody
     timeCreated UTCTime
     dateCreated Text
+
+    Foreign User OnDeleteCascade user_name_fk userName References name
     deriving Eq Show Generic
 |]
 
