@@ -79,7 +79,7 @@ PTH.share
     deriving Eq Show Read Generic
 
   Auth
-    userId (Key User) OnDeleteCascade
+    userId (Key User) OnUpdateCascade OnDeleteCascade
     password (PasswordHash Bcrypt)
     deriving Eq
 
@@ -90,7 +90,7 @@ PTH.share
     timeCreated UTCTime
     dateCreated Text
 
-    Foreign User OnDeleteCascade user_name_fk userName References name
+    Foreign User OnUpdateCascade OnDeleteCascade user_name_fk userName References name
     deriving Eq Show Generic
 |]
 
