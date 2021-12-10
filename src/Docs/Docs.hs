@@ -24,12 +24,15 @@ import Data.Swagger (
   info,
   license,
   schema,
-  title,
   toParamSchema,
   url,
   version,
  )
-import Database.Persist.Sql (Entity (..))
+import qualified Data.Swagger as Swagger
+import Database.Persist.Sql (
+  Entity (..),
+  toSqlKey,
+ )
 import Lens.Micro (mapped, (?~))
 import Parse.NoteTypes (
   Date,
@@ -71,6 +74,7 @@ import Web.Model (
   Key (..),
   Note (..),
   NoteInput (..),
+  NoteResponse (..),
   User (..),
   UserLogin (..),
   UserWithPassword (..),
@@ -83,7 +87,7 @@ writeSwaggerJSON =
 userSwagger :: Swagger
 userSwagger =
   toSwagger noteApi
-    & info . title .~ "some API"
+    & info . Swagger.title .~ "some API"
     & info . version .~ "1.0"
     & info . description ?~ "some api"
     & info . license ?~ ("MIT" & url ?~ URL "http://mit.com")
@@ -105,6 +109,12 @@ instance ToSchema NoteInput where
     genericDeclareNamedSchema defaultSchemaOptions proxy
       & mapped . schema . description ?~ "NoteInput"
       & mapped . schema . example ?~ toJSON noteInputSample
+
+instance ToSchema NoteResponse where
+  declareNamedSchema proxy =
+    genericDeclareNamedSchema defaultSchemaOptions proxy
+      & mapped . schema . description ?~ "NoteResponse"
+      & mapped . schema . example ?~ toJSON noteResponseSample
 
 instance ToSchema NoteBody where
   declareNamedSchema proxy =
@@ -210,11 +220,15 @@ userSample = User nameSample emailSample (Just True)
 noteSample :: Note
 noteSample =
   Note
-    nameSample
+    (toSqlKey 1)
     noteTitleSample
     noteBodySample
     (makeUTCTime (2021, 9, 30) (20, 42, 0))
     dateSample
+
+noteResponseSample :: NoteResponse
+noteResponseSample =
+  NoteResponse noteTitleSample noteBodySample "2021-10-10" nameSample
 
 noteInputSample :: NoteInput
 noteInputSample = NoteInput "nini" "some name" "do something good"

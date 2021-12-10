@@ -252,9 +252,9 @@ apiInteractionTest = do
         case result of
           Left (FailureResponse _ response) ->
             liftIO $ print $ responseBody response
-          Right [Entity (NoteKey (SqlBackendKey resultKey)) _] -> do
-            liftIO $ print resultKey
-            resultKey `shouldBe` 2
+          Right res -> do
+            let numberOfNotes = length res
+            numberOfNotes `shouldBe` 1
   describe "GET /notes/laurie?start=2021-8-2" $
     it
       ( "should successfully retrieve notes created"

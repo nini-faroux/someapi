@@ -14,6 +14,7 @@ module Web.Model (
   Key (..),
   Note (..),
   NoteInput (..),
+  NoteResponse (..),
   RunPool (..),
   User (..),
   UserLogin (..),
@@ -66,8 +67,8 @@ import RIO.Time (UTCTime)
 import Say (say)
 
 PTH.share
-  [PTH.mkPersist PTH.sqlSettings,
-   PTH.mkMigrate "migrateAll"
+  [ PTH.mkPersist PTH.sqlSettings
+  , PTH.mkMigrate "migrateAll"
   ]
   [PTH.persistLowerCase|
   User json
@@ -84,17 +85,14 @@ PTH.share
     deriving Eq
 
   Note json
-    userName Name
+    userId (Key User) OnUpdateCascade OnDeleteCascade
     noteTitle NoteTitle
     noteBody NoteBody
     timeCreated UTCTime
     dateCreated Text
-
-    Foreign User OnUpdateCascade OnDeleteCascade user_name_fk userName References name
     deriving Eq Show Generic
 |]
 
--- | Input type for creating user
 data UserWithPassword = UserWithPassword
   { name :: !Text
   , email :: !Text
@@ -106,7 +104,6 @@ instance FromJSON UserWithPassword
 
 instance ToJSON UserWithPassword
 
--- | Input type for user login
 data UserLogin = UserLogin
   { loginName :: !Text
   , loginPassword :: !Text
@@ -117,9 +114,6 @@ instance FromJSON UserLogin
 
 instance ToJSON UserLogin
 
-{- | Input type for the body of
- a new user note
--}
 data NoteInput = NoteInput
   { noteAuthor :: !Text
   , noteTitle :: !Text
@@ -127,9 +121,21 @@ data NoteInput = NoteInput
   }
   deriving (Eq, Show, Generic)
 
+data NoteResponse = NoteResponse
+  { title :: !NoteTitle
+  , body :: !NoteBody
+  , creationDate :: !Text
+  , author :: !Name
+  }
+  deriving (Eq, Show, Generic)
+
 instance FromJSON NoteInput
 
 instance ToJSON NoteInput
+
+instance FromJSON NoteResponse
+
+instance ToJSON NoteResponse
 
 instance Z.HasField "userName" User Name where
   hasField r = (\x -> r{userName = x}, userName r)
@@ -143,7 +149,8 @@ class Monad m => RunPool m where
 instance RunPool App where
   runPool query env = liftIO $ runSqlPool query env
 
-type WithDatabase env m = (HasConnectionPool env, MonadReader env m, RunPool m)
+type WithDatabase env m =
+  (HasConnectionPool env, MonadReader env m, RunPool m)
 
 runDB :: WithDatabase env m => SqlPersistT IO a -> m a
 runDB query = do

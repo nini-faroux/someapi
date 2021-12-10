@@ -2,9 +2,12 @@ module Parse.NoteValidation (
   parseNote,
 ) where
 
-import App (WithTime (..))
+import App (
+  WithTime (..),
+ )
 import qualified Data.ByteString.Lazy.UTF8 as LB
 import Data.Validation (Validation (..))
+import qualified Database.Persist as P
 import Parse.NoteTypes (
   DateInput (..),
   makeBody,
@@ -26,37 +29,56 @@ import Servant (
 import Web.Model (
   Note (..),
   NoteInput (..),
+  User,
+  WithDatabase,
  )
+import qualified Web.Query as Query
 
 {- | Parses the note into a valid form
  or returns the errors encountered
 -}
 parseNote ::
-  ( WithError m
+  ( WithDatabase env m
+  , WithError m
   , WithTime m
   ) =>
   NoteInput ->
   m Note
-parseNote noteInput = do
+parseNote noteInput@NoteInput {..} = do
   time' <- getTime
+  name <- makeName' noteAuthor
+  userId <- Query.getUserId name
   dateInput <- makeDateInput
-  case validNote noteInput time' dateInput of
+  case validNote noteInput userId time' dateInput of
     Failure errs -> throwError err400 {errBody = errorsToBS errs}
     Success note -> return note
   where
     errorsToBS :: [VError] -> LB.ByteString
     errorsToBS = LB.fromString . show
+    makeName' author =
+      case UserTypes.makeName author of
+        Failure errs -> throwError err400 {errBody = errorsToBS errs}
+        Success name' -> pure name'
 
--- Produces either a valid note
--- or accumulates any validation errors, encountered at each step, in a list
-validNote :: NoteInput -> UTCTime -> DateInput -> Validation [VError] Note
-validNote NoteInput {..} time date =
+validNote ::
+  NoteInput ->
+  Maybe (P.Key User) ->
+  UTCTime ->
+  DateInput ->
+  Validation [VError] Note
+validNote NoteInput {..} userId time date =
   Note
-    <$> UserTypes.makeName noteAuthor
+    <$> validUserId userId
     <*> makeTitle noteTitle
     <*> makeBody noteBody
     <*> validTime time
     <*> validateDate' date
+
+validUserId :: Maybe (P.Key User) -> Validation [VError] (P.Key User)
+validUserId mId =
+  case mId of
+    Nothing -> Failure [InvalidId]
+    Just id' -> Success id'
 
 validTime :: UTCTime -> Validation [VError] UTCTime
 validTime = Success

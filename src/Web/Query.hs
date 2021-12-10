@@ -10,6 +10,7 @@ module Web.Query (
   getUserByEmail,
   getUserById,
   getUserByName,
+  getUserId,
   getUsers,
   insertAuth,
   insertNote,
@@ -21,6 +22,7 @@ import Data.Password.Bcrypt (Bcrypt, PasswordHash (..))
 import Database.Esqueleto.Experimental (
   Entity (..),
   InnerJoin (..),
+  Value,
   from,
   insert,
   min_,
@@ -37,6 +39,10 @@ import Database.Esqueleto.Experimental (
   (^.),
  )
 import qualified Database.Persist as P
+import Parse.NoteTypes (
+  NoteBody,
+  NoteTitle,
+ )
 import Parse.UserTypes (
   Email,
   Name,
@@ -49,6 +55,7 @@ import Web.Model (
   Auth (..),
   EntityField (..),
   Note (..),
+  NoteResponse (..),
   User (..),
   WithDatabase,
   runDB,
@@ -69,48 +76,118 @@ getAuth name =
         where_ (user ^. UserActivated ==. val (Just True))
         pure auth
 
-getNotesBetweenDates ::
-  WithDatabase env m =>
-  Text ->
-  Text ->
-  m [Entity Note]
-getNotesBetweenDates start end = runDB $
-  select $
-    do
-      note <- from $ table @Note
-      where_ (note ^. NoteDateCreated >=. val start)
-      where_ (note ^. NoteDateCreated <=. val end)
-      pure note
+getNotesByName :: WithDatabase env m => Name -> m [NoteResponse]
+getNotesByName name = runDB $ do
+  notes <- select $ do
+    (note :& user) <-
+      from $
+        table @Note `InnerJoin` table @User
+          `on` ( \(note' :& user') ->
+                  user' ^. UserId ==. note' ^. NoteUserId
+               )
+    where_ (user ^. UserName ==. val name)
+    pure
+      ( note ^. NoteNoteTitle
+      , note ^. NoteNoteBody
+      , note ^. NoteDateCreated
+      , user ^. UserName
+      )
+  pure $ makeNoteResponses notes
 
 getNotesBetweenDatesWithName ::
   WithDatabase env m =>
   Name ->
   Text ->
   Text ->
-  m [Entity Note]
-getNotesBetweenDatesWithName name start end = runDB $
-  select $
-    do
-      note <- from $ table @Note
-      where_ (note ^. NoteUserName ==. val name)
-      where_ (note ^. NoteDateCreated >=. val start)
-      where_ (note ^. NoteDateCreated <=. val end)
-      pure note
+  m [NoteResponse]
+getNotesBetweenDatesWithName name start end = runDB $ do
+  notes <- select $ do
+    (note :& user) <-
+      from $
+        table @Note `InnerJoin` table @User
+          `on` ( \(note' :& user') ->
+                  user' ^. UserId ==. note' ^. NoteUserId
+               )
+    where_ (user ^. UserName ==. val name)
+    where_ (note ^. NoteDateCreated >=. val start)
+    where_ (note ^. NoteDateCreated <=. val end)
+    pure
+      ( note ^. NoteNoteTitle
+      , note ^. NoteNoteBody
+      , note ^. NoteDateCreated
+      , user ^. UserName
+      )
+  pure $ makeNoteResponses notes
 
-getNotesByName :: WithDatabase env m => Name -> m [Entity Note]
-getNotesByName name = runDB $
-  select $
-    do
-      note <- from $ table @Note
-      where_ (note ^. NoteUserName ==. val name)
-      pure note
+getNotesBetweenDates ::
+  WithDatabase env m =>
+  Text ->
+  Text ->
+  m [NoteResponse]
+getNotesBetweenDates start end = runDB $ do
+  notes <- select $ do
+    (note :& user) <-
+      from $
+        table @Note `InnerJoin` table @User
+          `on` ( \(note' :& user') ->
+                  user' ^. UserId ==. note' ^. NoteUserId
+               )
+    where_ (note ^. NoteDateCreated >=. val start)
+    where_ (note ^. NoteDateCreated <=. val end)
+    pure
+      ( note ^. NoteNoteTitle
+      , note ^. NoteNoteBody
+      , note ^. NoteDateCreated
+      , user ^. UserName
+      )
+  pure $ makeNoteResponses notes
+
+getNotes ::
+  WithDatabase env m =>
+  m [NoteResponse]
+getNotes = runDB $ do
+  notes <- select $ do
+    (note :& user) <-
+      from $
+        table @Note `InnerJoin` table @User
+          `on` ( \(note' :& user') ->
+                  user' ^. UserId ==. note' ^. NoteUserId
+               )
+    pure
+      ( note ^. NoteNoteTitle
+      , note ^. NoteNoteBody
+      , note ^. NoteDateCreated
+      , user ^. UserName
+      )
+  pure $ makeNoteResponses notes
+
+makeNoteResponses ::
+  [(Value NoteTitle, Value NoteBody, Value Text, Value Name)] ->
+  [NoteResponse]
+makeNoteResponses = foldr ((:) . noteResponse) []
+  where
+    noteResponse (noteTitle, noteBody, dateCreated, userName) =
+      NoteResponse
+        (unValue noteTitle)
+        (unValue noteBody)
+        (unValue dateCreated)
+        (unValue userName)
+
+getUserId :: WithDatabase env m => Name -> m (Maybe (P.Key User))
+getUserId name = runDB $ do
+  userIds <- select $ do
+    user <- from $ table @User
+    where_ (user ^. UserName ==. val name)
+    pure $ user ^. UserId
+  case userIds of
+    [] -> pure Nothing
+    (userId : _) -> pure $ Just $ unValue userId
 
 getFirstDate :: WithDatabase env m => m (Maybe Text)
 getFirstDate = runDB $ do
   days <- select $ do
     note <- from $ table @Note
-    let mDate = min_ (note ^. NoteDateCreated)
-    pure mDate
+    pure $ min_ (note ^. NoteDateCreated)
   case days of
     [] -> pure Nothing
     (day : _) -> pure $ unValue day
@@ -130,9 +207,6 @@ insertAuth ::
   m (P.Key Auth)
 insertAuth userId password =
   runDB . insert $ Auth {authUserId = userId, authPassword = password}
-
-getNotes :: WithDatabase env m => m [Entity Note]
-getNotes = runDB $ P.selectList [] []
 
 insertNote :: WithDatabase env m => Note -> m (P.Key Note)
 insertNote note = runDB $ P.insert note

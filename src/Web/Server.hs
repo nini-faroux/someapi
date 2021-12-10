@@ -35,4 +35,5 @@ hoistAppServer :: Config App -> Server NoteAPI
 hoistAppServer config = hoistServer noteApi (transform config) noteServer
   where
     transform :: Config App -> App a -> Handler a
-    transform config' app = Handler $ ExceptT $ try $ runReaderT (unApp app) config'
+    transform config' app =
+      Handler $ ExceptT $ try $ runReaderT (unApp app) config'

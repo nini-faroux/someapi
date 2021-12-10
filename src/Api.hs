@@ -68,6 +68,7 @@ import Web.JWT (
 import Web.Model (
   Note (..),
   NoteInput (..),
+  NoteResponse (..),
   User (..),
   UserLogin (..),
   UserWithPassword (..),
@@ -104,7 +105,7 @@ type GetNotes =
     :> QueryParam "start" Text
     :> QueryParam "end" Text
     :> Header "Authorization" Token
-    :> Get '[JSON] [Entity Note]
+    :> Get '[JSON] [NoteResponse]
 
 type CreateNote =
   "note"
@@ -118,7 +119,7 @@ type GetNotesByName =
     :> QueryParam "start" Text
     :> QueryParam "end" Text
     :> Header "Authorization" Token
-    :> Get '[JSON] [Entity Note]
+    :> Get '[JSON] [NoteResponse]
 
 noteApi :: Proxy NoteAPI
 noteApi = Proxy
@@ -233,7 +234,7 @@ getNotes ::
   Maybe Text ->
   Maybe Text ->
   Maybe Token ->
-  m [Entity Note]
+  m [NoteResponse]
 getNotes mStartDate mEndDate mToken = do
   scope <- verifyAuthToken mToken
   notesRequest (query mStartDate mEndDate) Nothing GetNoteRequest scope
@@ -268,7 +269,7 @@ getNotesByName ::
   Maybe Text ->
   Maybe Text ->
   Maybe Token ->
-  m [Entity Note]
+  m [NoteResponse]
 getNotesByName noteAuthor mStart mEnd mToken = do
   (existingName, scope) <- checkUserCredentials mToken noteAuthor
   notesRequest
@@ -286,9 +287,7 @@ getNotesByName noteAuthor mStart mEnd mToken = do
     query author js@(Just _startDate) je@(Just _endDate) =
       getNotesBetweenDates (Just author) js je
 
-{- | Endpoint handler for when the user clicks on the email activation link
- The user is activated allowing them to authenticate
--}
+-- | Endpoint handler for when the user clicks on the email activation link
 activateUserAccount ::
   ( WithDatabase env m
   , WithUserToken m
@@ -332,7 +331,7 @@ getNotesBetweenDates ::
   Maybe Name ->
   Maybe Text ->
   Maybe Text ->
-  m [Entity Note]
+  m [NoteResponse]
 getNotesBetweenDates Nothing Nothing Nothing = Query.getNotes
 getNotesBetweenDates (Just author) Nothing Nothing = Query.getNotesByName author
 getNotesBetweenDates mName (Just startDate) (Just endDate) = do
@@ -362,7 +361,7 @@ makeQuery ::
   Maybe Name ->
   Text ->
   Text ->
-  m [Entity Note]
+  m [NoteResponse]
 makeQuery mName start end
   | start > end =
     throwError err400 {errBody = "Error: end date is before start date"}
@@ -373,7 +372,7 @@ makeQuery mName start end
       Maybe Name ->
       Text ->
       Text ->
-      m [Entity Note]
+      m [NoteResponse]
     queryBetweenDates Nothing start' end' =
       Query.getNotesBetweenDates start' end'
     queryBetweenDates (Just name) start' end' =
