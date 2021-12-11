@@ -34,9 +34,6 @@ import Web.Model (
  )
 import qualified Web.Query as Query
 
-{- | Parses the note into a valid form
- or returns the errors encountered
--}
 parseNote ::
   ( WithDatabase env m
   , WithError m
