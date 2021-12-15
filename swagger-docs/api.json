@@ -30,6 +30,11 @@
                 }
             }
         },
+        "NoteBody": {
+            "example": "do something good",
+            "type": "string",
+            "description": "NoteBody"
+        },
         "Token": {
             "example": {
                 "token": "eyjhbgcioijiuzuxmiisinr5cci6ikpxvcj9.eyJhdWQiOlsic29tZWFwaSJdLCJleHAiOjE2MzE5NjU3MDcsImlhdCI6MTYzMTk2NDgwNywiaXNzIjoic29tZWFwaSIsInByaXZhdGUiOmZhbHNlLCJwcm90ZWN0ZWQiOnRydWV9.CTEFPu36V0NEHRkWL_IV4rJ4J87CL1Irac0Mn99x6lRslYvXLVDaabyDkhV_QqyOeAtq95x4hIAeSJIhE03hT"
@@ -42,6 +47,36 @@
             "properties": {
                 "token": {
                     "type": "string"
+                }
+            }
+        },
+        "NoteResponse": {
+            "example": {
+                "body": "do something good",
+                "author": "nini",
+                "creationDate": "2021-10-10",
+                "title": "some name"
+            },
+            "required": [
+                "title",
+                "body",
+                "creationDate",
+                "author"
+            ],
+            "type": "object",
+            "description": "NoteResponse",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/NoteBody"
+                },
+                "author": {
+                    "$ref": "#/definitions/Name"
+                },
+                "creationDate": {
+                    "type": "string"
+                },
+                "title": {
+                    "$ref": "#/definitions/NoteTitle"
                 }
             }
         },
@@ -94,6 +129,16 @@
                     "type": "string"
                 }
             }
+        },
+        "Name": {
+            "example": "nini",
+            "type": "string",
+            "description": "Name"
+        },
+        "NoteTitle": {
+            "example": "some name",
+            "type": "string",
+            "description": "NoteTitle"
         }
     },
     "paths": {
@@ -108,7 +153,9 @@
                     },
                     "200": {
                         "schema": {
-                            "items": {},
+                            "items": {
+                                "$ref": "#/definitions/NoteResponse"
+                            },
                             "type": "array"
                         },
                         "description": ""
@@ -187,7 +234,9 @@
                     },
                     "200": {
                         "schema": {
-                            "items": {},
+                            "items": {
+                                "$ref": "#/definitions/NoteResponse"
+                            },
                             "type": "array"
                         },
                         "description": ""
