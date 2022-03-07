@@ -15,7 +15,7 @@ curl -X POST 'https://some-api.fly.dev/user' \
 ```
 
 Reference the documentation here:
-  * https://some-api.fly.dev/docs
+  * https://nini-faroux.github.io/someapi/
 
 ***
 
