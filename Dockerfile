@@ -35,7 +35,7 @@ RUN apt-get update && \
 EXPOSE 8080/tcp
 
 COPY --from=build /root/.local/bin/some-api-exe .
-COPY ./static/ /app/web/dist
+COPY ./docs/ /app/web/dist
 
 ARG HMAC_SECRET
 ENV HMAC_SECRET=$HMAC_SECRET
